@@ -196,14 +196,10 @@ export function HeroScene({
   scrollProgress: MotionValue<number>
   introProgress: MotionValue<number>
 }) {
-  // Lighter GPU budget on phones: lower pixel ratio, pulled-back camera so the
-  // narrower aspect still frames the side panels, fewer sparkles, cheaper bloom.
-  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768
-
   return (
     <Canvas
-      dpr={isMobile ? [1, 1] : [1, 1.5]}
-      camera={{ position: [0, 0, isMobile ? 12 : 9.5], fov: 38 }}
+      dpr={[1, 1.5]}
+      camera={{ position: [0, 0, 9.5], fov: 38 }}
       gl={{ alpha: true, antialias: true }}
       style={{ pointerEvents: 'none' }}
     >
@@ -247,15 +243,10 @@ export function HeroScene({
         restZ={0}
       />
 
-      <Sparkles count={isMobile ? 16 : 30} scale={[10, 6, 5]} size={1.2} speed={0.2} opacity={0.28} color="#dedbd3" />
+      <Sparkles count={30} scale={[10, 6, 5]} size={1.2} speed={0.2} opacity={0.28} color="#dedbd3" />
 
       <EffectComposer enableNormalPass={false}>
-        <Bloom
-          luminanceThreshold={0.35}
-          luminanceSmoothing={0.9}
-          intensity={0.4}
-          mipmapBlur={!isMobile}
-        />
+        <Bloom luminanceThreshold={0.35} luminanceSmoothing={0.9} intensity={0.4} mipmapBlur />
       </EffectComposer>
     </Canvas>
   )
