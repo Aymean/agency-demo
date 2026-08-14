@@ -5,8 +5,7 @@ export function useShouldRender3D() {
 
   useEffect(() => {
     const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    const isNarrow = window.innerWidth < 768
-    setEnabled(!prefersReduced && !isNarrow)
+    setEnabled(!prefersReduced)
   }, [])
 
   return enabled

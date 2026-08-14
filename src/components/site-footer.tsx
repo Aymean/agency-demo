@@ -12,7 +12,7 @@ export function SiteFooter() {
       <div className="mx-auto flex max-w-6xl flex-col items-center gap-6 px-6 text-center sm:flex-row sm:justify-between sm:text-start">
         <div className="flex items-center gap-2.5">
           <img
-            src="/logo-black.png"
+            src="/logo-white.png"
             alt="ZayloGear"
             className="h-9 w-9"
             style={{ filter: 'drop-shadow(0 0 6px color-mix(in oklch, var(--signal) 35%, transparent))' }}

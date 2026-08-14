@@ -33,7 +33,7 @@ export function SiteNav() {
           data-cursor="link"
           className="flex items-center"
         >
-          <img src="/logo-black.png" alt="ZayloGear" className="h-8 w-8" />
+          <img src="/logo-white.png" alt="ZayloGear" className="h-8 w-8" />
         </a>
 
         <nav className="hidden items-center gap-8 text-sm text-muted-foreground md:flex">
