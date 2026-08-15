@@ -27,7 +27,7 @@ function scrollToId(id: string) {
 }
 
 const FALLBACK_MASK =
-  'radial-gradient(ellipse 60% 60% at 50% 50%, transparent 0%, transparent 55%, rgba(0,0,0,0.18) 68%, rgba(0,0,0,0.45) 80%, rgba(0,0,0,0.75) 92%, black 100%)'
+  'linear-gradient(to bottom, black 0%, black 15%, transparent 32%, transparent 68%, black 85%, black 100%)'
 
 // Masks the WebGL scene out from behind the actual text block instead of a
 // fixed, hand-tuned ellipse. A fixed shape only fit the proportions of one
@@ -37,12 +37,12 @@ const FALLBACK_MASK =
 // the subhead. Measuring the real content box makes this correct for any
 // viewport and either language automatically.
 //
-// The falloff is eased across many stops rather than one hard linear ramp —
-// a single "transparent -> black" step reads as a visible dark ellipse
-// against the bright resolved-panel content around it (a solid disc, not a
-// fade), because a small change in mask opacity is already enough to reveal
-// or hide a bright pattern. Spreading it over a wide, gradually-accelerating
-// curve keeps that boundary from reading as a shape at all.
+// This is a full-width horizontal band (linear, top-to-bottom), not a radial
+// ellipse. An elliptical "hole" cut into a busy background reads as a foreign
+// blob no matter how soft its edges are, because it has a curved boundary
+// that doesn't belong to anything else in the composition. A band has no such
+// edge to notice — it just reads as the ordinary top/bottom vignette any hero
+// image would have.
 function useContentMask(sectionRef: RefObject<HTMLElement | null>, contentRef: RefObject<HTMLElement | null>, dep: unknown) {
   const [mask, setMask] = useState(FALLBACK_MASK)
 
@@ -54,12 +54,19 @@ function useContentMask(sectionRef: RefObject<HTMLElement | null>, contentRef: R
       const s = section.getBoundingClientRect()
       const c = content.getBoundingClientRect()
       if (!s.height || !c.height) return
-      const centerYPct = ((c.top - s.top + c.height / 2) / s.height) * 100
-      const halfHeightPct = ((c.height / 2 + 64) / s.height) * 100
-      const halfWidthPct = Math.min(72, ((c.width / 2 + 48) / s.width) * 100)
+      // Small on purpose: on a short mobile hero the text block alone already
+      // fills most of the height, so any generous padding here overflows the
+      // 0-100% clamps at both ends and swallows the whole band, hiding the
+      // scene edge-to-edge with no visible sliver top or bottom at all.
+      const pad = (16 / s.height) * 100
+      const feather = (48 / s.height) * 100
+      const hideStart = Math.max(0, ((c.top - s.top) / s.height) * 100 - pad)
+      const hideEnd = Math.min(100, ((c.bottom - s.top) / s.height) * 100 + pad)
+      const fadeStart = Math.max(0, hideStart - feather)
+      const fadeEnd = Math.min(100, hideEnd + feather)
       setMask(
-        `radial-gradient(ellipse ${halfWidthPct.toFixed(1)}% ${halfHeightPct.toFixed(1)}% at 50% ${centerYPct.toFixed(1)}%, ` +
-          `transparent 0%, transparent 55%, rgba(0,0,0,0.18) 68%, rgba(0,0,0,0.45) 80%, rgba(0,0,0,0.75) 92%, black 100%)`,
+        `linear-gradient(to bottom, black 0%, black ${fadeStart.toFixed(1)}%, transparent ${hideStart.toFixed(1)}%, ` +
+          `transparent ${hideEnd.toFixed(1)}%, black ${fadeEnd.toFixed(1)}%, black 100%)`,
       )
     }
     measure()
