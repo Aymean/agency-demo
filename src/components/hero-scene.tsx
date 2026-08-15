@@ -2,8 +2,10 @@ import { useEffect, useMemo, useRef } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { RoundedBox, Sparkles } from '@react-three/drei'
 import { EffectComposer, Bloom } from '@react-three/postprocessing'
+import { KernelSize } from 'postprocessing'
 import * as THREE from 'three'
 import type { MotionValue } from 'motion/react'
+import { useSceneTier, type SceneTier } from '@/lib/use-should-render-3d'
 
 // Resolves a design token (e.g. "--signal", possibly an oklch() value) to a
 // THREE.Color by letting the browser's own CSS engine normalize it to rgb()
@@ -129,6 +131,7 @@ type PanelProps = {
   variant: 'main' | 'echo'
   driftPhase?: number
   dimOpacity?: number
+  tier: SceneTier
 }
 
 function Panel({
@@ -144,6 +147,7 @@ function Panel({
   variant,
   driftPhase = 0,
   dimOpacity = 1,
+  tier,
 }: PanelProps) {
   const group = useRef<THREE.Group>(null)
   const screenMat = useScreenMaterial(palette.signal, palette.foreground)
@@ -199,7 +203,12 @@ function Panel({
 
   return (
     <group ref={group}>
-      <RoundedBox args={[frameW, frameH, 0.16]} radius={0.09} smoothness={4} position={[0, 0, -0.08]}>
+      <RoundedBox
+        args={[frameW, frameH, 0.16]}
+        radius={0.09}
+        smoothness={tier === 'compact' ? 2 : 4}
+        position={[0, 0, -0.08]}
+      >
         <meshStandardMaterial color={palette.card} roughness={0.2} metalness={0.6} transparent opacity={dimOpacity} />
       </RoundedBox>
 
@@ -226,17 +235,42 @@ function Panel({
   )
 }
 
-// Half-extents of the full 3-panel composition (echo left/right + main),
-// measured from the panel restX/restY/frameW/frameH values below. Used to
-// keep the camera pulled back just far enough that nothing crops at any
-// canvas aspect ratio, instead of a fixed distance tuned for one shape.
-const COMPOSITION_HALF_W = 5.85
-const COMPOSITION_HALF_H = 2.15
+// Same three-panel composition (two dim echoes + the main mockup) in both
+// tiers — the compact variant only restacks the echoes above/below instead of
+// left/right, so the group still fits the width of a portrait phone without
+// shrinking the main panel to a speck. `halfW`/`halfH` are the half-extents of
+// the whole group, derived from the rest positions and frame sizes below, and
+// feed the camera fit so nothing crops at any canvas aspect ratio.
+const LAYOUTS = {
+  full: {
+    halfW: 5.85,
+    halfH: 2.15,
+    sparkles: { count: 30, scale: [10, 6, 5] as [number, number, number] },
+    main: { frameW: 6.6, frameH: 4.15, restX: 0, restY: -0.3, restZ: 0 },
+    echoes: [
+      { frameW: 4.6, frameH: 2.9, restX: -3.4, restY: 0.4, restZ: -2.4, restRotY: 0.35, driftPhase: 1.1, dimOpacity: 0.4 },
+      { frameW: 4.2, frameH: 2.65, restX: 3.5, restY: -0.5, restZ: -2.1, restRotY: -0.3, driftPhase: 3.4, dimOpacity: 0.32 },
+    ],
+  },
+  compact: {
+    halfW: 4.05,
+    halfH: 2.6,
+    sparkles: { count: 12, scale: [7, 7, 4] as [number, number, number] },
+    main: { frameW: 5.4, frameH: 3.4, restX: 0, restY: -0.1, restZ: 0 },
+    echoes: [
+      { frameW: 3.4, frameH: 2.15, restX: -2.3, restY: 1.5, restZ: -2.6, restRotY: 0.35, driftPhase: 1.1, dimOpacity: 0.4 },
+      { frameW: 3.1, frameH: 1.95, restX: 2.4, restY: -1.6, restZ: -2.3, restRotY: -0.3, driftPhase: 3.4, dimOpacity: 0.32 },
+    ],
+  },
+} satisfies Record<SceneTier, unknown>
+
 const FRAME_MARGIN = 1.02
 const MIN_DIST = 8
-const MAX_DIST = 22
+// Tall/narrow viewports need a much longer pull-back to fit the group's width;
+// the old 22 ceiling was low enough to crop the echoes on a portrait phone.
+const MAX_DIST = 40
 
-function ResponsiveCamera() {
+function ResponsiveCamera({ halfW, halfH }: { halfW: number; halfH: number }) {
   const camera = useThree((state) => state.camera) as THREE.PerspectiveCamera
   const size = useThree((state) => state.size)
 
@@ -244,12 +278,12 @@ function ResponsiveCamera() {
     if (!size.width || !size.height) return
     const aspect = size.width / size.height
     const halfTan = Math.tan((camera.fov * Math.PI) / 360)
-    const distForHeight = COMPOSITION_HALF_H / halfTan
-    const distForWidth = COMPOSITION_HALF_W / (halfTan * aspect)
+    const distForHeight = halfH / halfTan
+    const distForWidth = halfW / (halfTan * aspect)
     const dist = THREE.MathUtils.clamp(Math.max(distForHeight, distForWidth) * FRAME_MARGIN, MIN_DIST, MAX_DIST)
     camera.position.z = dist
     camera.updateProjectionMatrix()
-  }, [camera, size.width, size.height])
+  }, [camera, size.width, size.height, halfW, halfH])
 
   return null
 }
@@ -257,67 +291,65 @@ function ResponsiveCamera() {
 export function HeroScene({
   scrollProgress,
   introProgress,
+  onReady,
 }: {
   scrollProgress: MotionValue<number>
   introProgress: MotionValue<number>
+  /** Fired once the renderer exists, so the hero can time its intro to a scene
+   *  that is actually on screen rather than to its own mount. */
+  onReady?: () => void
 }) {
   const palette = useScenePalette()
+  const tier = useSceneTier()
+  const compact = tier === 'compact'
+  const layout = LAYOUTS[tier]
 
   return (
     <Canvas
-      dpr={[1, 1.5]}
+      // Phones stay at dpr 1 — the scene is a soft, masked backdrop, so the
+      // extra pixels buy nothing and cost the most on exactly the devices
+      // least able to pay. MSAA is dropped there too; Bloom softens the edges.
+      dpr={compact ? 1 : [1, 1.5]}
       camera={{ position: [0, 0, 9.5], fov: 38 }}
-      gl={{ alpha: true, antialias: true }}
+      gl={{ alpha: true, antialias: !compact, powerPreference: 'high-performance' }}
       style={{ pointerEvents: 'none' }}
+      onCreated={() => onReady?.()}
     >
-      <ResponsiveCamera />
+      <ResponsiveCamera halfW={layout.halfW} halfH={layout.halfH} />
       <ambientLight intensity={0.75} />
       <directionalLight position={[4, 6, 5]} intensity={1.05} />
       <directionalLight position={[-5, -2, -4]} intensity={0.42} color={palette.signal} />
       <pointLight position={[0, -3, 4]} intensity={0.25} color={palette.foreground} />
 
-      <Panel
-        variant="echo"
-        scrollProgress={scrollProgress}
-        palette={palette}
-        frameW={4.6}
-        frameH={2.9}
-        restX={-3.4}
-        restY={0.4}
-        restZ={-2.4}
-        restRotY={0.35}
-        driftPhase={1.1}
-        dimOpacity={0.4}
-      />
-      <Panel
-        variant="echo"
-        scrollProgress={scrollProgress}
-        palette={palette}
-        frameW={4.2}
-        frameH={2.65}
-        restX={3.5}
-        restY={-0.5}
-        restZ={-2.1}
-        restRotY={-0.3}
-        driftPhase={3.4}
-        dimOpacity={0.32}
-      />
+      {layout.echoes.map((echo, i) => (
+        <Panel key={i} variant="echo" scrollProgress={scrollProgress} palette={palette} tier={tier} {...echo} />
+      ))}
       <Panel
         variant="main"
         scrollProgress={scrollProgress}
         introProgress={introProgress}
         palette={palette}
-        frameW={6.6}
-        frameH={4.15}
-        restX={0}
-        restY={-0.3}
-        restZ={0}
+        tier={tier}
+        {...layout.main}
       />
 
-      <Sparkles count={30} scale={[10, 6, 5]} size={1.2} speed={0.2} opacity={0.28} color={palette.foreground} />
+      <Sparkles
+        count={layout.sparkles.count}
+        scale={layout.sparkles.scale}
+        size={1.2}
+        speed={0.2}
+        opacity={0.28}
+        color={palette.foreground}
+      />
 
-      <EffectComposer enableNormalPass={false}>
-        <Bloom luminanceThreshold={0.5} luminanceSmoothing={0.9} intensity={0.28} mipmapBlur />
+      <EffectComposer enableNormalPass={false} multisampling={compact ? 0 : 8}>
+        <Bloom
+          luminanceThreshold={0.5}
+          luminanceSmoothing={0.9}
+          intensity={compact ? 0.22 : 0.28}
+          mipmapBlur
+          kernelSize={compact ? KernelSize.SMALL : KernelSize.LARGE}
+        />
       </EffectComposer>
     </Canvas>
   )

@@ -8,7 +8,7 @@ export function Process() {
   const { t } = useLang()
 
   return (
-    <section id="process" className="border-t border-border bg-secondary/40 py-24 md:py-32">
+    <section id="process" className="border-t border-border bg-secondary/40 py-16 md:py-24">
       <div className="mx-auto max-w-6xl px-6">
         <Reveal className="mx-auto max-w-2xl text-center">
           <div className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">
@@ -20,8 +20,8 @@ export function Process() {
         </Reveal>
 
         <RevealGroup
-          className="mt-16 grid grid-cols-1 gap-10 md:grid-cols-3 md:gap-8"
-          stagger={0.12}
+          className="mt-12 grid grid-cols-1 gap-8 md:grid-cols-3 md:gap-6"
+          stagger={0.3}
         >
           {t.process.steps.map((step, i) => (
             <RevealItem key={step.n} className="relative">
@@ -30,7 +30,7 @@ export function Process() {
               <h3 className="mt-3 text-lg font-semibold tracking-tight">{step.title}</h3>
               <p className="mt-2 text-pretty text-sm text-muted-foreground">{step.desc}</p>
               {i < t.process.steps.length - 1 && (
-                <div aria-hidden className="mt-8 h-px w-full bg-border md:hidden" />
+                <div aria-hidden className="mt-6 h-px w-full bg-border md:hidden" />
               )}
             </RevealItem>
           ))}

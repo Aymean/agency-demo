@@ -1,7 +1,6 @@
 import { lazy, memo, Suspense, useEffect, useRef, useState } from 'react'
 import { animate, motion, useMotionValue, useScroll, useTransform } from 'motion/react'
 import { Button } from '@/components/ui/button'
-import { HeroMobileVisual } from '@/components/hero-mobile-visual'
 import { Magnetic } from '@/components/magnetic'
 import { PulseDot } from '@/components/pulse-dot'
 import { RevealGroup, RevealItem, TextReveal } from '@/components/reveal'
@@ -12,9 +11,16 @@ import { useLang } from '@/lib/i18n'
 const HeroScene = lazy(() => import('@/components/hero-scene').then((m) => ({ default: m.HeroScene })))
 
 const EASE = [0.16, 1, 0.3, 1] as const
-const SWEEP_DELAY = 0.35
-const SWEEP_DURATION = 0.9
+// The intro is one legible beat, not a flourish: the sweep crosses, the panel
+// snaps glitch -> resolved, that resolved state is held for a moment, and only
+// then does the headline start. Earlier values ran the snap under the headline
+// reveal, so you inferred the beat from the end state instead of seeing it.
+const SWEEP_DELAY = 0.3
+const SWEEP_DURATION = 1.35
 const RESOLVE_AT = SWEEP_DELAY + SWEEP_DURATION
+const RESOLVE_DURATION = 0.82
+const RESOLVE_HOLD = 0.3
+const HEADLINE_AT = RESOLVE_AT + RESOLVE_DURATION + RESOLVE_HOLD
 
 function scrollToId(id: string) {
   document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
@@ -34,24 +40,39 @@ export function Hero() {
   const { scrollYProgress } = useScroll({ target: heroRef, offset: ['start start', 'end start'] })
   const introProgress = useMotionValue(0)
   const [resolved, setResolved] = useState(false)
+  const [sceneReady, setSceneReady] = useState(false)
+  const [headlinePlay, setHeadlinePlay] = useState(false)
 
+  // The whole point of the intro is that you watch the panel resolve, so the
+  // clock starts when the scene is actually on screen — not on mount. The 3D
+  // bundle is lazy, and starting on mount let the beat play out over an empty
+  // hero on any load slow enough to matter.
   useEffect(() => {
-    if (!show3D) return
-    const timer = setTimeout(() => {
+    if (!show3D || !sceneReady) return
+    const resolveTimer = setTimeout(() => {
       setResolved(true)
-      animate(introProgress, 1, { duration: 0.55, ease: EASE })
+      animate(introProgress, 1, { duration: RESOLVE_DURATION, ease: EASE })
     }, RESOLVE_AT * 1000)
-    return () => clearTimeout(timer)
-  }, [show3D, introProgress])
+    const headlineTimer = setTimeout(() => setHeadlinePlay(true), HEADLINE_AT * 1000)
+    return () => {
+      clearTimeout(resolveTimer)
+      clearTimeout(headlineTimer)
+    }
+  }, [show3D, sceneReady, introProgress])
 
-  const h1Delay = show3D ? RESOLVE_AT : 0.45
-  const h2Delay = show3D ? RESOLVE_AT + 0.13 : 0.56
+  // No scene to wait on: reduced motion and incapable devices get the copy
+  // straight away rather than sitting on an empty hero.
+  useEffect(() => {
+    if (show3D) return
+    const timer = setTimeout(() => setHeadlinePlay(true), 250)
+    return () => clearTimeout(timer)
+  }, [show3D])
 
   return (
     <section
       id="top"
       ref={heroRef}
-      className="relative overflow-hidden pt-40 pb-24 md:pt-48 md:pb-32"
+      className="relative overflow-hidden pt-28 pb-16 md:pt-36 md:pb-24"
     >
       <div
         aria-hidden
@@ -63,29 +84,34 @@ export function Hero() {
           className="pointer-events-none absolute inset-0 -z-10 [mask-image:radial-gradient(ellipse_58%_36%_at_50%_37%,transparent_0%,black_88%)] [-webkit-mask-image:radial-gradient(ellipse_58%_36%_at_50%_37%,transparent_0%,black_88%)]"
         >
           <Suspense fallback={null}>
-            <HeroScene scrollProgress={scrollYProgress} introProgress={introProgress} />
+            <HeroScene
+              scrollProgress={scrollYProgress}
+              introProgress={introProgress}
+              onReady={() => setSceneReady(true)}
+            />
           </Suspense>
-          <PulseSweep dir={dir} />
+          {/* Mounts with the scene, so the sweep never crosses an empty frame. */}
+          {sceneReady && <PulseSweep dir={dir} />}
         </div>
       )}
       <RevealGroup className="mx-auto max-w-4xl px-6 text-center" stagger={0.1}>
-        <RevealItem className="mb-8 inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-1.5 text-xs font-medium text-muted-foreground">
+        <RevealItem className="mb-6 inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-1.5 text-xs font-medium text-muted-foreground">
           <PulseDot active={!show3D || resolved} />
           {t.hero.kicker}
         </RevealItem>
 
         <h1 className="text-balance text-4xl font-semibold tracking-tight sm:text-5xl md:text-6xl">
-          <TextReveal text={t.hero.h1a} delay={h1Delay} />
-          <TextReveal text={t.hero.h1b} delay={h2Delay} className="text-muted-foreground" />
+          <TextReveal text={t.hero.h1a} play={headlinePlay} />
+          <TextReveal text={t.hero.h1b} play={headlinePlay} delay={0.13} className="text-muted-foreground" />
         </h1>
 
         <RevealItem>
-          <p className="mx-auto mt-6 max-w-xl text-pretty text-base text-muted-foreground sm:text-lg">
+          <p className="mx-auto mt-5 max-w-xl text-pretty text-base text-muted-foreground sm:text-lg">
             {t.hero.sub}
           </p>
         </RevealItem>
 
-        <RevealItem className="mt-10 flex items-center justify-center">
+        <RevealItem className="mt-8 flex items-center justify-center">
           <Magnetic>
             <Button data-cursor="link" size="lg" onClick={() => scrollToId('contact')} className="px-8">
               {t.hero.cta}
@@ -93,9 +119,7 @@ export function Hero() {
           </Magnetic>
         </RevealItem>
 
-        {!show3D && <HeroMobileVisual />}
-
-        <RevealItem className="mx-auto mt-16 grid max-w-lg grid-cols-3 gap-6 border-t border-border pt-8">
+        <RevealItem className="mx-auto mt-12 grid max-w-lg grid-cols-3 gap-6 border-t border-border pt-6">
           <dl className="contents">
             {STATS.map((stat, i) => (
               <StatCell key={i} {...stat} label={labels[i]} />
@@ -115,7 +139,12 @@ const PulseSweep = memo(function PulseSweep({ dir }: { dir: 'ltr' | 'rtl' }) {
   const fromPct = dir === 'rtl' ? 104 : -4
   const toPct = dir === 'rtl' ? -4 : 104
   const progress = useMotionValue(0)
-  const left = useTransform(progress, [0, 1], [`${fromPct}%`, `${toPct}%`])
+  // Animating `left` (a layout property) forced a synchronous reflow every
+  // frame, right alongside the WebGL canvas's own render loop — that fight
+  // for the main thread is what read as stutter. `x` is a transform: it moves
+  // the whole wrapper (sized to the hero's full width, so -4%..104% still
+  // sweeps edge-to-edge) as a compositor-only operation with no reflow/repaint.
+  const x = useTransform(progress, [0, 1], [`${fromPct}%`, `${toPct}%`])
   const opacity = useTransform(progress, [0, 0.12, 0.85, 1], [0, 1, 1, 0])
 
   useEffect(() => {
@@ -126,9 +155,11 @@ const PulseSweep = memo(function PulseSweep({ dir }: { dir: 'ltr' | 'rtl' }) {
   return (
     <motion.div
       aria-hidden
-      className="absolute inset-y-[15%] w-px bg-signal shadow-[0_0_18px_3px_var(--signal)]"
-      style={{ left, opacity }}
-    />
+      className="absolute inset-y-[15%] start-0 h-auto w-full will-change-transform"
+      style={{ x, opacity }}
+    >
+      <div className="h-full w-px bg-signal shadow-[0_0_18px_3px_var(--signal)]" />
+    </motion.div>
   )
 })
 

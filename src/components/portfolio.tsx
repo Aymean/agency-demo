@@ -27,12 +27,12 @@ function ScreenWipe() {
       className={cn(
         'card-static pointer-events-none absolute inset-0 z-10',
         pointerFine &&
-          'transition-[clip-path] duration-500 ease-out [clip-path:inset(0_0_0_0%)] group-hover:[clip-path:inset(0_0_0_100%)]',
+          'transition-[clip-path] duration-[850ms] ease-out [clip-path:inset(0_0_0_0%)] group-hover:[clip-path:inset(0_0_0_100%)]',
       )}
       initial={!pointerFine ? { clipPath: 'inset(0% 0% 0% 0%)' } : undefined}
       whileInView={!pointerFine ? { clipPath: 'inset(0% 0% 0% 100%)' } : undefined}
       viewport={!pointerFine ? { once: true, margin: '-15% 0px -10% 0px' } : undefined}
-      transition={{ duration: 0.6, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
+      transition={{ duration: 0.95, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
     />
   )
 }
@@ -53,7 +53,7 @@ export function Portfolio() {
   const { t, lang } = useLang()
 
   return (
-    <section id="work" className="border-t border-border py-24 md:py-32">
+    <section id="work" className="border-t border-border py-16 md:py-24">
       <div className="mx-auto max-w-6xl px-6">
         <Reveal className="mx-auto max-w-2xl text-center">
           <div className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">
@@ -66,7 +66,7 @@ export function Portfolio() {
         </Reveal>
 
         <RevealGroup
-          className="mt-16 grid grid-cols-1 gap-x-8 gap-y-12 sm:grid-cols-2 lg:grid-cols-3"
+          className="mt-12 grid grid-cols-1 gap-x-6 gap-y-9 sm:grid-cols-2 lg:grid-cols-3"
           stagger={0.07}
         >
           {portfolioItems.map((item) => (
@@ -106,7 +106,7 @@ export function Portfolio() {
                   </div>
                 </DialogTrigger>
 
-                <DialogContent className="max-w-lg sm:max-w-xl">
+                <DialogContent className="max-w-lg sm:max-w-2xl">
                   <CaseDetail item={item} />
                 </DialogContent>
               </Dialog>
@@ -123,7 +123,12 @@ function CaseDetail({ item }: { item: PortfolioItem }) {
 
   return (
     <>
-      <BrowserMockup src={item.image} alt={item.label[lang]} />
+      <BrowserMockup
+        src={item.imageFull}
+        alt={item.label[lang]}
+        scrollable
+        viewportClassName="h-[52vh] sm:h-[58vh]"
+      />
       <DialogHeader>
         <div className="flex flex-wrap items-center gap-2">
           <DialogTitle className="text-lg">{item.label[lang]}</DialogTitle>

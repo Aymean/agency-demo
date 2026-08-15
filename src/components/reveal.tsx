@@ -6,7 +6,7 @@ const EASE = [0.16, 1, 0.3, 1] as const
 
 const itemVariants: Variants = {
   hidden: { opacity: 0, y: 24 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.7, ease: EASE } },
+  show: { opacity: 1, y: 0, transition: { duration: 0.9, ease: EASE } },
 }
 
 export function Reveal({
@@ -25,7 +25,7 @@ export function Reveal({
       whileInView="show"
       viewport={{ once: true, margin: '-15% 0px -10% 0px' }}
       variants={itemVariants}
-      transition={{ delay, duration: 0.7, ease: EASE }}
+      transition={{ delay, duration: 0.9, ease: EASE }}
     >
       {children}
     </motion.div>
@@ -67,18 +67,26 @@ export function TextReveal({
   className,
   delay = 0,
   duration = 0.9,
+  /**
+   * Gate the reveal on an external cue instead of firing on mount. `delay` is
+   * then measured from the moment this flips true. The hero needs this because
+   * its schedule isn't known at mount — it depends on the 3D scene being on
+   * screen — and a delay prop that changes after mount never re-fires.
+   */
+  play = true,
 }: {
   text: string
   className?: string
   delay?: number
   duration?: number
+  play?: boolean
 }) {
   return (
     <span className={cn('block overflow-hidden', className)}>
       <motion.span
         className="block"
         initial={{ y: '110%' }}
-        animate={{ y: '0%' }}
+        animate={{ y: play ? '0%' : '110%' }}
         transition={{ duration, ease: EASE, delay }}
       >
         {text}

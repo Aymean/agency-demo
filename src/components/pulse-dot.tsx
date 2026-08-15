@@ -25,7 +25,7 @@ export function PulseDot({
       )}
       <span
         className={cn(
-          'relative inline-flex rounded-full transition-colors duration-500',
+          'relative inline-flex rounded-full transition-colors duration-[800ms]',
           dim,
           active ? 'bg-signal' : 'bg-muted-foreground/40',
         )}

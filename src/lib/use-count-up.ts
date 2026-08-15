@@ -1,7 +1,7 @@
 import { useInView } from 'motion/react'
 import { useEffect, useRef, useState } from 'react'
 
-export function useCountUp(target: number, duration = 1.4) {
+export function useCountUp(target: number, duration = 2) {
   const ref = useRef<HTMLElement | null>(null)
   const inView = useInView(ref, { once: true, margin: '-80px' })
   const [value, setValue] = useState(0)
@@ -15,8 +15,9 @@ export function useCountUp(target: number, duration = 1.4) {
     }
 
     // Discrete jumps rather than a smooth tween — reads as a heartbeat
-    // ticking up, not a generic SaaS counter.
-    const STEP_MS = 160
+    // ticking up, not a generic SaaS counter. Each step has to be held long
+    // enough to register as its own tick rather than blurring into a ramp.
+    const STEP_MS = 240
     const steps = Math.max(1, Math.min(target, Math.round((duration * 1000) / STEP_MS)))
     let i = 0
 

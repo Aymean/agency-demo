@@ -23,7 +23,7 @@ export function SiteNav() {
         scrolled ? 'border-border/60 shadow-[0_1px_0_0_var(--border)]' : 'border-transparent',
       )}
     >
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
+      <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-6">
         <a
           href="#top"
           onClick={(e) => {

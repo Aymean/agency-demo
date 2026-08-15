@@ -44,7 +44,7 @@ export function ProcessIcon({ variant }: { variant: 'flatline' | 'rising' | 'sig
           initial={{ pathLength: 0, opacity: 0.5 }}
           whileInView={{ pathLength: 1, opacity: 1 }}
           viewport={{ once: true, margin: '-20%' }}
-          transition={{ duration: 1, delay: 0.2, ease: EASE }}
+          transition={{ duration: 2.1, delay: 0.35, ease: EASE }}
         />
       )}
 
@@ -59,7 +59,7 @@ export function ProcessIcon({ variant }: { variant: 'flatline' | 'rising' | 'sig
           initial={{ pathLength: 0 }}
           whileInView={{ pathLength: 1 }}
           viewport={{ once: true, margin: '-20%' }}
-          transition={{ duration: 0.8, delay: 0.15, ease: EASE }}
+          transition={{ duration: 1.9, delay: 0.35, ease: EASE }}
         />
       )}
     </svg>

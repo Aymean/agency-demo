@@ -1,6 +1,9 @@
 export type PortfolioItem = {
   slug: string
+  /** Cropped 16:10 hero shot used for the grid card. */
   image: string
+  /** Full scroll-height capture of the real page, shown scrollably in the dialog. */
+  imageFull: string
   label: { en: string; ar: string }
   region: { en: string; ar: string }
   descriptor: { en: string; ar: string }
@@ -10,6 +13,7 @@ export const portfolioItems: PortfolioItem[] = [
   {
     slug: 'greendent',
     image: '/portfolio/greendent.png',
+    imageFull: '/portfolio/greendent-full.jpg',
     label: { en: 'Dental Clinic — Concept', ar: 'عيادة أسنان — نموذج' },
     region: { en: 'Gulf coastal city', ar: 'مدينة ساحلية خليجية' },
     descriptor: {
@@ -20,6 +24,7 @@ export const portfolioItems: PortfolioItem[] = [
   {
     slug: 'bently',
     image: '/portfolio/bently.png',
+    imageFull: '/portfolio/bently-full.jpg',
     label: { en: 'Dental Group — Concept', ar: 'مجموعة أسنان — نموذج' },
     region: { en: 'Gulf coastal city', ar: 'مدينة ساحلية خليجية' },
     descriptor: {
@@ -30,6 +35,7 @@ export const portfolioItems: PortfolioItem[] = [
   {
     slug: 'lavida',
     image: '/portfolio/lavida.png',
+    imageFull: '/portfolio/lavida-full.jpg',
     label: { en: 'Aesthetic Clinic — Concept', ar: 'عيادة تجميل — نموذج' },
     region: { en: 'Gulf metro area', ar: 'منطقة حضرية خليجية' },
     descriptor: {
@@ -40,6 +46,7 @@ export const portfolioItems: PortfolioItem[] = [
   {
     slug: 'arcave',
     image: '/portfolio/arcave.png',
+    imageFull: '/portfolio/arcave-full.jpg',
     label: { en: 'Architecture Studio — Concept', ar: 'استوديو عمارة — نموذج' },
     region: { en: 'Gulf metro area', ar: 'منطقة حضرية خليجية' },
     descriptor: {
@@ -50,6 +57,7 @@ export const portfolioItems: PortfolioItem[] = [
   {
     slug: 'icondesign',
     image: '/portfolio/icondesign.png',
+    imageFull: '/portfolio/icondesign-full.jpg',
     label: { en: 'Interior Design Studio — Concept', ar: 'استوديو تصميم داخلي — نموذج' },
     region: { en: 'Multi-city studio', ar: 'استوديو متعدد المدن' },
     descriptor: {
@@ -60,6 +68,7 @@ export const portfolioItems: PortfolioItem[] = [
   {
     slug: 'gravity',
     image: '/portfolio/gravity.png',
+    imageFull: '/portfolio/gravity-full.jpg',
     label: { en: 'Real Estate Platform — Concept', ar: 'منصة عقارية — نموذج' },
     region: { en: 'Gulf metro area', ar: 'منطقة حضرية خليجية' },
     descriptor: {
@@ -70,6 +79,7 @@ export const portfolioItems: PortfolioItem[] = [
   {
     slug: 'urbannest',
     image: '/portfolio/urbannest.png',
+    imageFull: '/portfolio/urbannest-full.jpg',
     label: { en: 'Real Estate Brokerage — Concept', ar: 'وسيط عقاري — نموذج' },
     region: { en: 'Gulf metro area', ar: 'منطقة حضرية خليجية' },
     descriptor: {
