@@ -30,7 +30,13 @@ const EASE = [0.16, 1, 0.3, 1] as const
 const SWEEP_DELAY = 0.3
 const SWEEP_DURATION = 0.6
 const RESOLVE_AT = SWEEP_DELAY + SWEEP_DURATION
-const RESOLVE_DURATION = 0.42
+// The shader already resolves cell-by-cell in a staggered pattern (each
+// cell has its own hash-derived threshold along uProgress — see
+// SCREEN_FRAGMENT in hero-scene.tsx). At 0.42s that stagger was too fast to
+// actually perceive as individual blocks snapping in; this is purely the
+// resolve beat's own pacing and doesn't touch HEADLINE_DELAY below, which
+// stays on its own independent clock.
+const RESOLVE_DURATION = 2.0
 
 const HEADLINE_DELAY = 0.3
 // Deferred past the headline's own reveal (delay + duration + h1b's extra
