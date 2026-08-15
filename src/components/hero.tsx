@@ -26,7 +26,8 @@ function scrollToId(id: string) {
   document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
 }
 
-const FALLBACK_MASK = 'radial-gradient(ellipse 60% 60% at 50% 50%, transparent 0%, transparent 55%, black 100%)'
+const FALLBACK_MASK =
+  'radial-gradient(ellipse 60% 60% at 50% 50%, transparent 0%, transparent 55%, rgba(0,0,0,0.18) 68%, rgba(0,0,0,0.45) 80%, rgba(0,0,0,0.75) 92%, black 100%)'
 
 // Masks the WebGL scene out from behind the actual text block instead of a
 // fixed, hand-tuned ellipse. A fixed shape only fit the proportions of one
@@ -35,6 +36,13 @@ const FALLBACK_MASK = 'radial-gradient(ellipse 60% 60% at 50% 50%, transparent 0
 // showing above the headline and its grid pattern showing straight through
 // the subhead. Measuring the real content box makes this correct for any
 // viewport and either language automatically.
+//
+// The falloff is eased across many stops rather than one hard linear ramp —
+// a single "transparent -> black" step reads as a visible dark ellipse
+// against the bright resolved-panel content around it (a solid disc, not a
+// fade), because a small change in mask opacity is already enough to reveal
+// or hide a bright pattern. Spreading it over a wide, gradually-accelerating
+// curve keeps that boundary from reading as a shape at all.
 function useContentMask(sectionRef: RefObject<HTMLElement | null>, contentRef: RefObject<HTMLElement | null>, dep: unknown) {
   const [mask, setMask] = useState(FALLBACK_MASK)
 
@@ -50,7 +58,8 @@ function useContentMask(sectionRef: RefObject<HTMLElement | null>, contentRef: R
       const halfHeightPct = ((c.height / 2 + 64) / s.height) * 100
       const halfWidthPct = Math.min(72, ((c.width / 2 + 48) / s.width) * 100)
       setMask(
-        `radial-gradient(ellipse ${halfWidthPct.toFixed(1)}% ${halfHeightPct.toFixed(1)}% at 50% ${centerYPct.toFixed(1)}%, transparent 0%, transparent 55%, black 100%)`,
+        `radial-gradient(ellipse ${halfWidthPct.toFixed(1)}% ${halfHeightPct.toFixed(1)}% at 50% ${centerYPct.toFixed(1)}%, ` +
+          `transparent 0%, transparent 55%, rgba(0,0,0,0.18) 68%, rgba(0,0,0,0.45) 80%, rgba(0,0,0,0.75) 92%, black 100%)`,
       )
     }
     measure()
