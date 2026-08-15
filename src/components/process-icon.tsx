@@ -17,7 +17,10 @@ export function ProcessIcon({ variant }: { variant: 'flatline' | 'rising' | 'sig
         height={46}
         rx={6}
         strokeWidth={1.5}
-        className={cn('transition-colors', isSignal ? 'stroke-signal/70' : isRising ? 'stroke-signal/35' : 'stroke-border')}
+        className={cn(
+          'transition-colors',
+          isSignal ? 'stroke-signal/70' : isRising ? 'stroke-signal/35' : 'stroke-muted-foreground/40',
+        )}
       />
 
       {variant === 'flatline' && (
@@ -26,10 +29,10 @@ export function ProcessIcon({ variant }: { variant: 'flatline' | 'rising' | 'sig
           y1={24}
           x2={60}
           y2={24}
-          className="stroke-muted-foreground/50"
+          className="stroke-muted-foreground"
           strokeWidth={2}
           strokeLinecap="round"
-          animate={{ opacity: [0.5, 0.85, 0.4, 0.7, 0.5] }}
+          animate={{ opacity: [0.65, 1, 0.55, 0.9, 0.65] }}
           transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
         />
       )}

@@ -1,4 +1,4 @@
-import { lazy, memo, Suspense, useEffect, useRef, useState } from 'react'
+import { lazy, memo, Suspense, useEffect, useRef, useState, type RefObject } from 'react'
 import { animate, motion, useMotionValue, useScroll, useTransform } from 'motion/react'
 import { Button } from '@/components/ui/button'
 import { Magnetic } from '@/components/magnetic'
@@ -26,6 +26,47 @@ function scrollToId(id: string) {
   document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
 }
 
+const FALLBACK_MASK = 'radial-gradient(ellipse 60% 60% at 50% 50%, transparent 0%, transparent 55%, black 100%)'
+
+// Masks the WebGL scene out from behind the actual text block instead of a
+// fixed, hand-tuned ellipse. A fixed shape only fit the proportions of one
+// layout (desktop) — on mobile the same text stack takes up a much taller
+// fraction of a much shorter hero, so the old ellipse left the panel's edge
+// showing above the headline and its grid pattern showing straight through
+// the subhead. Measuring the real content box makes this correct for any
+// viewport and either language automatically.
+function useContentMask(sectionRef: RefObject<HTMLElement | null>, contentRef: RefObject<HTMLElement | null>, dep: unknown) {
+  const [mask, setMask] = useState(FALLBACK_MASK)
+
+  useEffect(() => {
+    function measure() {
+      const section = sectionRef.current
+      const content = contentRef.current
+      if (!section || !content) return
+      const s = section.getBoundingClientRect()
+      const c = content.getBoundingClientRect()
+      if (!s.height || !c.height) return
+      const centerYPct = ((c.top - s.top + c.height / 2) / s.height) * 100
+      const halfHeightPct = ((c.height / 2 + 64) / s.height) * 100
+      const halfWidthPct = Math.min(72, ((c.width / 2 + 48) / s.width) * 100)
+      setMask(
+        `radial-gradient(ellipse ${halfWidthPct.toFixed(1)}% ${halfHeightPct.toFixed(1)}% at 50% ${centerYPct.toFixed(1)}%, transparent 0%, transparent 55%, black 100%)`,
+      )
+    }
+    measure()
+    const raf = requestAnimationFrame(measure)
+    document.fonts?.ready.then(measure).catch(() => {})
+    window.addEventListener('resize', measure)
+    return () => {
+      cancelAnimationFrame(raf)
+      window.removeEventListener('resize', measure)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `dep` (the visible copy) is the real trigger for a language-switch remeasure
+  }, [sectionRef, contentRef, dep])
+
+  return mask
+}
+
 const STATS = [
   { value: 50, prefix: '', suffix: '+' },
   { value: 4, prefix: '', suffix: '' },
@@ -37,6 +78,8 @@ export function Hero() {
   const labels = [t.hero.stat1l, t.hero.stat2l, t.hero.stat3l]
   const show3D = useShouldRender3D()
   const heroRef = useRef<HTMLElement>(null)
+  const contentRef = useRef<HTMLDivElement>(null)
+  const heroMask = useContentMask(heroRef, contentRef, t.hero.sub)
   const { scrollYProgress } = useScroll({ target: heroRef, offset: ['start start', 'end start'] })
   const introProgress = useMotionValue(0)
   const [resolved, setResolved] = useState(false)
@@ -81,7 +124,8 @@ export function Hero() {
       {show3D && (
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-0 -z-10 [mask-image:radial-gradient(ellipse_58%_36%_at_50%_37%,transparent_0%,black_88%)] [-webkit-mask-image:radial-gradient(ellipse_58%_36%_at_50%_37%,transparent_0%,black_88%)]"
+          className="pointer-events-none absolute inset-0 -z-10"
+          style={{ maskImage: heroMask, WebkitMaskImage: heroMask }}
         >
           <Suspense fallback={null}>
             <HeroScene
@@ -94,39 +138,41 @@ export function Hero() {
           {sceneReady && <PulseSweep dir={dir} />}
         </div>
       )}
-      <RevealGroup className="mx-auto max-w-4xl px-6 text-center" stagger={0.1}>
-        <RevealItem className="mb-6 inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-1.5 text-xs font-medium text-muted-foreground">
-          <PulseDot active={!show3D || resolved} />
-          {t.hero.kicker}
-        </RevealItem>
+      <div ref={contentRef}>
+        <RevealGroup className="mx-auto max-w-4xl px-6 text-center" stagger={0.1}>
+          <RevealItem className="mb-6 inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-1.5 text-xs font-medium text-muted-foreground">
+            <PulseDot active={!show3D || resolved} />
+            {t.hero.kicker}
+          </RevealItem>
 
-        <h1 className="text-balance text-4xl font-semibold tracking-tight sm:text-5xl md:text-6xl">
-          <TextReveal text={t.hero.h1a} play={headlinePlay} />
-          <TextReveal text={t.hero.h1b} play={headlinePlay} delay={0.13} className="text-muted-foreground" />
-        </h1>
+          <h1 className="text-balance text-4xl font-semibold tracking-tight sm:text-5xl md:text-6xl">
+            <TextReveal text={t.hero.h1a} play={headlinePlay} />
+            <TextReveal text={t.hero.h1b} play={headlinePlay} delay={0.13} className="text-muted-foreground" />
+          </h1>
 
-        <RevealItem>
-          <p className="mx-auto mt-5 max-w-xl text-pretty text-base text-muted-foreground sm:text-lg">
-            {t.hero.sub}
-          </p>
-        </RevealItem>
+          <RevealItem>
+            <p className="mx-auto mt-5 max-w-xl text-pretty text-base text-muted-foreground sm:text-lg">
+              {t.hero.sub}
+            </p>
+          </RevealItem>
 
-        <RevealItem className="mt-8 flex items-center justify-center">
-          <Magnetic>
-            <Button data-cursor="link" size="lg" onClick={() => scrollToId('contact')} className="px-8">
-              {t.hero.cta}
-            </Button>
-          </Magnetic>
-        </RevealItem>
+          <RevealItem className="mt-8 flex items-center justify-center">
+            <Magnetic>
+              <Button data-cursor="link" size="lg" onClick={() => scrollToId('contact')} className="px-8">
+                {t.hero.cta}
+              </Button>
+            </Magnetic>
+          </RevealItem>
 
-        <RevealItem className="mx-auto mt-12 grid max-w-lg grid-cols-3 gap-6 border-t border-border pt-6">
-          <dl className="contents">
-            {STATS.map((stat, i) => (
-              <StatCell key={i} {...stat} label={labels[i]} />
-            ))}
-          </dl>
-        </RevealItem>
-      </RevealGroup>
+          <RevealItem className="mx-auto mt-12 grid max-w-lg grid-cols-3 gap-6 border-t border-border pt-6">
+            <dl className="contents">
+              {STATS.map((stat, i) => (
+                <StatCell key={i} {...stat} label={labels[i]} />
+              ))}
+            </dl>
+          </RevealItem>
+        </RevealGroup>
+      </div>
     </section>
   )
 }
