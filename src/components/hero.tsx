@@ -1,6 +1,7 @@
 import { lazy, memo, Suspense, useEffect, useRef, useState } from 'react'
 import { animate, motion, useMotionValue, useScroll, useTransform } from 'motion/react'
 import { Button } from '@/components/ui/button'
+import { HeroMobileVisual } from '@/components/hero-mobile-visual'
 import { Magnetic } from '@/components/magnetic'
 import { PulseDot } from '@/components/pulse-dot'
 import { RevealGroup, RevealItem, TextReveal } from '@/components/reveal'
@@ -59,7 +60,7 @@ export function Hero() {
       {show3D && (
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-0 -z-10 [mask-image:radial-gradient(ellipse_40%_25%_at_50%_37%,transparent_0%,black_82%)] [-webkit-mask-image:radial-gradient(ellipse_40%_25%_at_50%_37%,transparent_0%,black_82%)]"
+          className="pointer-events-none absolute inset-0 -z-10 [mask-image:radial-gradient(ellipse_58%_36%_at_50%_37%,transparent_0%,black_88%)] [-webkit-mask-image:radial-gradient(ellipse_58%_36%_at_50%_37%,transparent_0%,black_88%)]"
         >
           <Suspense fallback={null}>
             <HeroScene scrollProgress={scrollYProgress} introProgress={introProgress} />
@@ -91,6 +92,8 @@ export function Hero() {
             </Button>
           </Magnetic>
         </RevealItem>
+
+        {!show3D && <HeroMobileVisual />}
 
         <RevealItem className="mx-auto mt-16 grid max-w-lg grid-cols-3 gap-6 border-t border-border pt-8">
           <dl className="contents">
