@@ -7,18 +7,34 @@ import * as THREE from 'three'
 import type { MotionValue } from 'motion/react'
 import { useSceneTier, type SceneTier } from '@/lib/use-should-render-3d'
 
-// Resolves a design token (e.g. "--signal", possibly an oklch() value) to a
-// THREE.Color by letting the browser's own CSS engine normalize it to rgb()
-// via a throwaway element, rather than duplicating the palette as hex/vec3
-// literals in this file.
+// Resolves a design token (e.g. "--signal", an oklch() value in this
+// palette) to a THREE.Color. Can't hand the raw var() straight to
+// THREE.Color: getComputedStyle().color is not guaranteed to normalize an
+// oklch-defined color down to legacy rgb() syntax — this Chromium build
+// returns it as a literal "oklch(...)" string, which THREE.Color can't
+// parse (it silently falls back rather than throwing, so the panel's
+// materials end up on some default/black color and effectively vanish, no
+// error to point at it). A 1x1 canvas sidesteps the whole question: filling
+// a rect always rasterizes to concrete 0-255 RGB bytes regardless of what
+// color space the input was declared in, so reading them back is a
+// reliable resolve no matter how the browser serializes computed colors.
 function resolveCssColor(varName: string, fallback: string): THREE.Color {
   if (typeof document === 'undefined') return new THREE.Color(fallback)
   const probe = document.createElement('span')
   probe.style.color = `var(${varName})`
   document.body.appendChild(probe)
-  const rgb = getComputedStyle(probe).color
+  const cssColor = getComputedStyle(probe).color
   document.body.removeChild(probe)
-  return new THREE.Color(rgb || fallback)
+
+  const canvas = document.createElement('canvas')
+  canvas.width = canvas.height = 1
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return new THREE.Color(fallback)
+  ctx.fillStyle = fallback
+  ctx.fillStyle = cssColor || fallback
+  ctx.fillRect(0, 0, 1, 1)
+  const [r, g, b] = ctx.getImageData(0, 0, 1, 1).data
+  return new THREE.Color(r / 255, g / 255, b / 255)
 }
 
 type ScenePalette = {

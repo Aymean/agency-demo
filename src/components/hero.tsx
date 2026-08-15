@@ -1,5 +1,5 @@
 import { lazy, memo, Suspense, useEffect, useRef, useState, type RefObject } from 'react'
-import { animate, motion, useMotionValue, useScroll, useTransform } from 'motion/react'
+import { animate, easeInOut, motion, useMotionValue, useScroll, useTransform } from 'motion/react'
 import { Button } from '@/components/ui/button'
 import { Magnetic } from '@/components/magnetic'
 import { PulseDot } from '@/components/pulse-dot'
@@ -11,16 +11,40 @@ import { useLang } from '@/lib/i18n'
 const HeroScene = lazy(() => import('@/components/hero-scene').then((m) => ({ default: m.HeroScene })))
 
 const EASE = [0.16, 1, 0.3, 1] as const
-// The intro is one legible beat, not a flourish: the sweep crosses, the panel
-// snaps glitch -> resolved, that resolved state is held for a moment, and only
-// then does the headline start. Earlier values ran the snap under the headline
-// reveal, so you inferred the beat from the end state instead of seeing it.
+// The headline no longer waits on the 3D beat at all — it used to start only
+// after sceneReady + this sequence, but sceneReady itself waits on a ~960KB
+// (254KB gzipped) lazy chunk (three.js/drei/postprocessing) finishing
+// download+parse. That's real, variable network time with no upper bound,
+// so gating visible copy on it meant the "wait" was never just these
+// constants — it was chunk-load-time PLUS all of this, additive, on every
+// visit slower than a fast broadband connection. The headline now runs on
+// its own short fixed timer (see HEADLINE_DELAY below); this sequence is
+// purely the 3D panel's own internal beat, played whenever it's ready, as a
+// background flourish rather than a blocking intro.
+// SWEEP_DELAY has a bit more slack than it strictly needs to: the scene's
+// materials/shaders compile lazily on their first real render, which lands
+// right around when sceneReady flips and PulseSweep mounts — on a slow
+// device that first-frame compile is itself real synchronous work, and a
+// too-tight delay risks the sweep's opacity fade racing it and skipping
+// frames instead of animating smoothly.
 const SWEEP_DELAY = 0.3
-const SWEEP_DURATION = 1.35
+const SWEEP_DURATION = 0.6
 const RESOLVE_AT = SWEEP_DELAY + SWEEP_DURATION
-const RESOLVE_DURATION = 0.82
-const RESOLVE_HOLD = 0.3
-const HEADLINE_AT = RESOLVE_AT + RESOLVE_DURATION + RESOLVE_HOLD
+const RESOLVE_DURATION = 0.42
+
+const HEADLINE_DELAY = 0.3
+// Deferred past the headline's own reveal (delay + duration + h1b's extra
+// stagger, plus a little slack) rather than started on mount. Decoupling the
+// *state* wasn't enough on its own: the moment something actually renders
+// <HeroScene>, React.lazy's dynamic import fires and the browser has to
+// parse+execute a ~960KB module on the same single JS thread the headline's
+// own rAF-driven transform animation runs on. Measured directly (see the
+// commit this comment shipped in): that parse/execute work was starving the
+// headline's setTimeout for 1.5-2s even though it was logically independent
+// — a real main-thread contention issue, not just a sequencing one. Waiting
+// until the headline is done before that work ever starts removes the
+// contention instead of just hoping the two don't collide.
+const SCENE_MOUNT_DELAY = 1.4
 
 function scrollToId(id: string) {
   document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
@@ -101,31 +125,35 @@ export function Hero() {
   const [resolved, setResolved] = useState(false)
   const [sceneReady, setSceneReady] = useState(false)
   const [headlinePlay, setHeadlinePlay] = useState(false)
+  const [mountScene, setMountScene] = useState(false)
 
-  // The whole point of the intro is that you watch the panel resolve, so the
-  // clock starts when the scene is actually on screen — not on mount. The 3D
-  // bundle is lazy, and starting on mount let the beat play out over an empty
-  // hero on any load slow enough to matter.
+  // The 3D panel's own glitch -> resolved beat. Starts when the scene is
+  // actually on screen (not on mount, so it can't play out over a blank
+  // canvas) but no longer gates anything else — the headline has already
+  // appeared by the time most connections get here.
   useEffect(() => {
     if (!show3D || !sceneReady) return
     const resolveTimer = setTimeout(() => {
       setResolved(true)
       animate(introProgress, 1, { duration: RESOLVE_DURATION, ease: EASE })
     }, RESOLVE_AT * 1000)
-    const headlineTimer = setTimeout(() => setHeadlinePlay(true), HEADLINE_AT * 1000)
-    return () => {
-      clearTimeout(resolveTimer)
-      clearTimeout(headlineTimer)
-    }
+    return () => clearTimeout(resolveTimer)
   }, [show3D, sceneReady, introProgress])
 
-  // No scene to wait on: reduced motion and incapable devices get the copy
-  // straight away rather than sitting on an empty hero.
+  // Headline copy on a short fixed timer, independent of the 3D scene's load
+  // state entirely — the primary content should never wait on a decorative
+  // asset, regardless of how slow that asset's chunk is to fetch.
   useEffect(() => {
-    if (show3D) return
-    const timer = setTimeout(() => setHeadlinePlay(true), 250)
+    const timer = setTimeout(() => setHeadlinePlay(true), HEADLINE_DELAY * 1000)
     return () => clearTimeout(timer)
-  }, [show3D])
+  }, [])
+
+  // Don't even start the 3D scene's dynamic import until the headline is
+  // done — see SCENE_MOUNT_DELAY above.
+  useEffect(() => {
+    const timer = setTimeout(() => setMountScene(true), SCENE_MOUNT_DELAY * 1000)
+    return () => clearTimeout(timer)
+  }, [])
 
   return (
     <section
@@ -137,7 +165,7 @@ export function Hero() {
         aria-hidden
         className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[600px] bg-[radial-gradient(ellipse_60%_50%_at_50%_-10%,color-mix(in_oklch,var(--foreground)_6%,transparent),transparent)]"
       />
-      {show3D && (
+      {show3D && mountScene && (
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 -z-10"
@@ -207,7 +235,13 @@ const PulseSweep = memo(function PulseSweep({ dir }: { dir: 'ltr' | 'rtl' }) {
   // the whole wrapper (sized to the hero's full width, so -4%..104% still
   // sweeps edge-to-edge) as a compositor-only operation with no reflow/repaint.
   const x = useTransform(progress, [0, 1], [`${fromPct}%`, `${toPct}%`])
-  const opacity = useTransform(progress, [0, 0.12, 0.85, 1], [0, 1, 1, 0])
+  // A short flat plateau at full opacity with tiny fade slivers reads as a
+  // flash/blink, not a glow — most of the curve should be the rise and fall
+  // themselves, eased, so brightness feels like it's breathing in and out
+  // rather than snapping on and off.
+  const opacity = useTransform(progress, [0, 0.4, 0.6, 1], [0, 1, 1, 0], {
+    ease: [easeInOut, easeInOut, easeInOut],
+  })
 
   useEffect(() => {
     const controls = animate(progress, 1, { duration: SWEEP_DURATION, delay: SWEEP_DELAY, ease: EASE })
