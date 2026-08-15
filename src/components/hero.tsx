@@ -21,15 +21,21 @@ const EASE = [0.16, 1, 0.3, 1] as const
 // its own short fixed timer (see HEADLINE_DELAY below); this sequence is
 // purely the 3D panel's own internal beat, played whenever it's ready, as a
 // background flourish rather than a blocking intro.
-// SWEEP_DELAY has a bit more slack than it strictly needs to: the scene's
-// materials/shaders compile lazily on their first real render, which lands
-// right around when sceneReady flips and PulseSweep mounts — on a slow
-// device that first-frame compile is itself real synchronous work, and a
-// too-tight delay risks the sweep's opacity fade racing it and skipping
-// frames instead of animating smoothly.
-const SWEEP_DELAY = 0.3
+// Near-zero, not 0: the scene's materials/shaders compile lazily on their
+// first real render, which lands right around when sceneReady flips and
+// PulseSweep mounts, and a genuinely 0 delay risked the sweep's opacity
+// fade racing that first-frame compile on a slow device. A small buffer is
+// enough to dodge that without reintroducing a dead pause.
+const SWEEP_DELAY = 0.05
 const SWEEP_DURATION = 0.6
-const RESOLVE_AT = SWEEP_DELAY + SWEEP_DURATION
+// The resolve used to wait for the sweep to finish its full crossing
+// (SWEEP_DELAY + SWEEP_DURATION = ~0.9s) before the bricks started forming
+// at all — that read as "load, see an empty/glitching panel, then finally
+// something happens" instead of the panel visibly building itself from the
+// first moment it's on screen. The resolve now starts at the same instant
+// the sweep does; the sweep still visually crosses the panel over its own
+// duration, it's just no longer a gate the resolve sits behind.
+const RESOLVE_AT = SWEEP_DELAY
 // The shader already resolves cell-by-cell in a staggered pattern (each
 // cell has its own hash-derived threshold along uProgress — see
 // SCREEN_FRAGMENT in hero-scene.tsx). At 0.42s that stagger was too fast to
