@@ -50,16 +50,26 @@ function scrollToId(id: string) {
   document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
 }
 
-const FALLBACK_MASK =
-  'linear-gradient(to bottom, black 0%, black 15%, transparent 32%, transparent 68%, black 85%, black 100%)'
+// Alpha the scene is dimmed to directly behind text — NOT 0. On mobile the
+// text stack (kicker through stats) fills 70-90% of a short hero's height,
+// so a mask that fully hides the scene there doesn't just protect text, it
+// hides almost the entire 3D scene on almost every real viewport — which is
+// what "the animation is completely missing" turned out to mean: the panel
+// was rendering fine, it was masked to zero alpha under nearly all of the
+// content. Dimming instead of hiding keeps it visibly present everywhere,
+// while still cutting its contrast enough for text on top to read clearly.
+const DIM_ALPHA = 0.32
 
-// Masks the WebGL scene out from behind the actual text block instead of a
-// fixed, hand-tuned ellipse. A fixed shape only fit the proportions of one
-// layout (desktop) — on mobile the same text stack takes up a much taller
-// fraction of a much shorter hero, so the old ellipse left the panel's edge
-// showing above the headline and its grid pattern showing straight through
-// the subhead. Measuring the real content box makes this correct for any
-// viewport and either language automatically.
+const FALLBACK_MASK =
+  `linear-gradient(to bottom, black 0%, black 15%, rgba(0,0,0,${DIM_ALPHA}) 32%, rgba(0,0,0,${DIM_ALPHA}) 68%, black 85%, black 100%)`
+
+// Dims the WebGL scene down behind the actual text block instead of a fixed,
+// hand-tuned ellipse. A fixed shape only fit the proportions of one layout
+// (desktop) — on mobile the same text stack takes up a much taller fraction
+// of a much shorter hero, so the old ellipse left the panel's edge showing
+// above the headline and its grid pattern showing straight through the
+// subhead at full brightness. Measuring the real content box makes this
+// correct for any viewport and either language automatically.
 //
 // This is a full-width horizontal band (linear, top-to-bottom), not a radial
 // ellipse. An elliptical "hole" cut into a busy background reads as a foreign
@@ -78,10 +88,6 @@ function useContentMask(sectionRef: RefObject<HTMLElement | null>, contentRef: R
       const s = section.getBoundingClientRect()
       const c = content.getBoundingClientRect()
       if (!s.height || !c.height) return
-      // Small on purpose: on a short mobile hero the text block alone already
-      // fills most of the height, so any generous padding here overflows the
-      // 0-100% clamps at both ends and swallows the whole band, hiding the
-      // scene edge-to-edge with no visible sliver top or bottom at all.
       const pad = (16 / s.height) * 100
       const feather = (48 / s.height) * 100
       const hideStart = Math.max(0, ((c.top - s.top) / s.height) * 100 - pad)
@@ -89,8 +95,8 @@ function useContentMask(sectionRef: RefObject<HTMLElement | null>, contentRef: R
       const fadeStart = Math.max(0, hideStart - feather)
       const fadeEnd = Math.min(100, hideEnd + feather)
       setMask(
-        `linear-gradient(to bottom, black 0%, black ${fadeStart.toFixed(1)}%, transparent ${hideStart.toFixed(1)}%, ` +
-          `transparent ${hideEnd.toFixed(1)}%, black ${fadeEnd.toFixed(1)}%, black 100%)`,
+        `linear-gradient(to bottom, black 0%, black ${fadeStart.toFixed(1)}%, rgba(0,0,0,${DIM_ALPHA}) ${hideStart.toFixed(1)}%, ` +
+          `rgba(0,0,0,${DIM_ALPHA}) ${hideEnd.toFixed(1)}%, black ${fadeEnd.toFixed(1)}%, black 100%)`,
       )
     }
     measure()
@@ -166,21 +172,28 @@ export function Hero() {
         className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[600px] bg-[radial-gradient(ellipse_60%_50%_at_50%_-10%,color-mix(in_oklch,var(--foreground)_6%,transparent),transparent)]"
       />
       {show3D && mountScene && (
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0 -z-10"
-          style={{ maskImage: heroMask, WebkitMaskImage: heroMask }}
-        >
-          <Suspense fallback={null}>
-            <HeroScene
-              scrollProgress={scrollYProgress}
-              introProgress={introProgress}
-              onReady={() => setSceneReady(true)}
-            />
-          </Suspense>
-          {/* Mounts with the scene, so the sweep never crosses an empty frame. */}
+        <>
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 -z-10"
+            style={{ maskImage: heroMask, WebkitMaskImage: heroMask }}
+          >
+            <Suspense fallback={null}>
+              <HeroScene
+                scrollProgress={scrollYProgress}
+                introProgress={introProgress}
+                onReady={() => setSceneReady(true)}
+              />
+            </Suspense>
+          </div>
+          {/* Deliberately NOT inside the masked wrapper above: it sits at
+              inset-y-15%..85%, the same band the mask hides to protect text
+              legibility, so a masked sweep is mathematically invisible on
+              every viewport where the mask is doing its job. It's a one-shot
+              0.6s beat, not a persistent legibility risk like the static
+              panel, so it doesn't need the same protection. */}
           {sceneReady && <PulseSweep dir={dir} />}
-        </div>
+        </>
       )}
       <div ref={contentRef}>
         <RevealGroup className="mx-auto max-w-4xl px-6 text-center" stagger={0.1}>
