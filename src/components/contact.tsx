@@ -14,7 +14,7 @@ export function Contact() {
 
   return (
     <section id="contact" className="border-t border-border py-16 md:py-24">
-      <Reveal className="mx-auto max-w-2xl px-6 text-center">
+      <Reveal lock className="mx-auto max-w-2xl px-6 text-center">
         <div className="type-eyebrow flex items-center justify-center gap-2 text-muted-foreground">
           <PulseDot speed="slow" />
           {t.contact.kicker}

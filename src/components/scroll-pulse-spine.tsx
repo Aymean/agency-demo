@@ -4,7 +4,7 @@ import { PulseDot } from '@/components/pulse-dot'
 import { useLang } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 
-const SECTION_IDS = ['top', 'work', 'process', 'contact']
+const SECTION_IDS = ['top', 'work', 'process', 'pricing', 'contact']
 const TRACK_TOP = '5rem'
 const TRACK_BOTTOM = '2.5rem'
 const TRACK_HEIGHT = `calc(100% - ${TRACK_TOP} - ${TRACK_BOTTOM})`

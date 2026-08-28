@@ -6,6 +6,7 @@ type Dict = {
   nav: {
     work: string
     process: string
+    pricing: string
     contact: string
     cta: string
   }
@@ -36,6 +37,15 @@ type Dict = {
     heading: string
     steps: { n: string; title: string; desc: string }[]
   }
+  pricing: {
+    kicker: string
+    heading: string
+    /** Frames the range as a range. Never presented as a quote. */
+    sub: string
+    range: string
+    rangeNote: string
+    terms: { label: string; desc: string }[]
+  }
   contact: {
     kicker: string
     heading: string
@@ -55,14 +65,15 @@ const en: Dict = {
   nav: {
     work: 'Work',
     process: 'Process',
+    pricing: 'Pricing',
     contact: 'Contact',
     cta: 'Book a Call',
   },
   hero: {
-    eyebrow: 'Dental & Aesthetic Clinics — Gulf',
+    eyebrow: 'Clinics of Every Kind — Saudi Arabia',
     h1a: 'We build the better version of your website.',
     h1b: 'Then we ask if you want it.',
-    sub: 'We find dental and aesthetic clinics running on broken or outdated sites and start rebuilding before we ever pitch you — book a quick call and watch the new version live, before you spend a cent.',
+    sub: 'We find clinics running on broken or outdated sites and start rebuilding before we ever pitch you — book a quick call and watch the new version live, before you spend a cent.',
     cta: 'Book a Call',
     stat1l: 'Sites rebuilt',
     stat3l: 'Upfront to see it built',
@@ -96,6 +107,18 @@ const en: Dict = {
       },
     ],
   },
+  pricing: {
+    kicker: 'Pricing',
+    heading: 'It depends on the website you want.',
+    sub: 'Most builds land somewhere in this range. Where yours sits depends on how much site there is to build — pages, languages, booking, the things only your clinic needs. The exact number comes after we have talked, not before.',
+    range: '$3,000 - $10,000',
+    rangeNote: 'Typical project range',
+    terms: [
+      { label: '50% to start', desc: 'A deposit once you have seen the build and decided to go ahead.' },
+      { label: '50% before delivery', desc: 'The balance is due before the site goes live, not after.' },
+      { label: 'Live in under 24h', desc: 'Once the final payment clears, your site is live in less than a day.' },
+    ],
+  },
   contact: {
     kicker: 'Get In Touch',
     heading: 'Want to see what yours could look like?',
@@ -106,7 +129,7 @@ const en: Dict = {
   },
   footer: {
     tagline: 'We build it first. You decide after.',
-    legalLine: 'ZayloGear Agency is directed by',
+    legalLine: 'Zaylo Agency is directed by',
     rights: 'All rights reserved.',
   },
 }
@@ -115,14 +138,15 @@ const ar: Dict = {
   nav: {
     work: 'أعمالنا',
     process: 'طريقة العمل',
+    pricing: 'الأسعار',
     contact: 'تواصل',
     cta: 'احجز مكالمة',
   },
   hero: {
-    eyebrow: 'متخصصون في مواقع العيادات السنية والتجميلية — الخليج',
+    eyebrow: 'متخصصون في مواقع العيادات بكل تخصصاتها — السعودية',
     h1a: 'نبني لك نسخة أفضل من موقعك.',
     h1b: 'بعدين نسألك إذا تبيها.',
-    sub: 'نلقى العيادات السنية والتجميلية اللي موقعها قديم أو معطل ونبدأ نبنيه قبل لا نسوّق لك رسميًا — احجز مكالمة سريعة وشوف النسخة الجديدة شغالة أمامك، قبل ما تدفع ريال.',
+    sub: 'نلقى العيادات اللي موقعها قديم أو معطل ونبدأ نبنيه قبل لا نسوّق لك رسميًا — احجز مكالمة سريعة وشوف النسخة الجديدة شغالة أمامك، قبل ما تدفع ريال.',
     cta: 'احجز مكالمة',
     stat1l: 'موقع أعدنا بناءه',
     stat3l: 'مقدّم مالي لترى الموقع جاهزًا',
@@ -156,6 +180,18 @@ const ar: Dict = {
       },
     ],
   },
+  pricing: {
+    kicker: 'الأسعار',
+    heading: 'يعتمد على الموقع اللي تبيه.',
+    sub: 'أغلب المشاريع تجي ضمن هذا النطاق. وين يوقف سعرك يعتمد على حجم الموقع نفسه — عدد الصفحات، اللغات، الحجز، والأشياء اللي تخص عيادتك بالذات. الرقم النهائي يجي بعد ما نتكلم، مو قبل.',
+    range: '$3,000 - $10,000',
+    rangeNote: 'النطاق المعتاد للمشروع',
+    terms: [
+      { label: '50% للبدء', desc: 'دفعة مقدّمة بعد ما تشوف الموقع وتقرر تكمل.' },
+      { label: '50% قبل التسليم', desc: 'الباقي يُدفع قبل ما ينزل الموقع، مو بعده.' },
+      { label: 'ينزل خلال أقل من 24 ساعة', desc: 'بعد ما توصلنا الدفعة الأخيرة، موقعك يصير شغّال بأقل من يوم.' },
+    ],
+  },
   contact: {
     kicker: 'تواصل معنا',
     heading: 'تبي تشوف شكل موقعك الجديد؟',
@@ -166,7 +202,7 @@ const ar: Dict = {
   },
   footer: {
     tagline: 'نبنيه أول. أنت تقرر بعدين.',
-    legalLine: 'وكالة زايلوجير يديرها',
+    legalLine: 'وكالة زايلو يديرها',
     rights: 'جميع الحقوق محفوظة.',
   },
 }

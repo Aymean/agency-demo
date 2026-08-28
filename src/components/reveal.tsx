@@ -1,32 +1,126 @@
 import { motion, type Variants } from 'motion/react'
 import type { ReactNode } from 'react'
+import { useLang } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 
 const EASE = [0.16, 1, 0.3, 1] as const
 
-const itemVariants: Variants = {
-  hidden: { opacity: 0, y: 24 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.9, ease: EASE } },
+/* The section-transition motif.
+ *
+ * Content arrives from a direction and locks into place, echoing the way the
+ * logo pieces assembled in the intro. It is deliberately built as props on
+ * these existing primitives rather than as a parallel animation system, so
+ * every section keeps using the same components it already used.
+ *
+ * The easing is the shared house curve, which is doing most of the work: its
+ * heavy deceleration is what makes an arrival read as landing rather than as
+ * sliding to a halt. No separate "lock" easing is needed.
+ */
+
+/** Entry direction. `start`/`end` are logical, not physical — see below. */
+export type RevealFrom = 'up' | 'start' | 'end'
+
+// Far enough that the arrival reads as travel rather than a fade with a nudge.
+const TRAVEL = 32
+
+/* Direction has to be resolved against the writing direction, not hard-coded.
+ * Motion animates x in pixels, so there is no logical-property equivalent to
+ * lean on: an item entering from the inline-start must come from the left in
+ * English and from the right in Arabic, or half the site's animations point
+ * the wrong way in RTL and nothing in the type system notices. */
+/* Note the `key={dir}` on both consumers below. Motion applies `initial` once,
+ * at mount, and these elements sit at that resting state until they scroll into
+ * view — so swapping the variants object afterwards does NOT restyle them. With
+ * the site defaulting to Arabic, every not-yet-revealed section would keep the
+ * RTL entry offset after a switch to English and fly in from the wrong side.
+ * Re-keying on `dir` remounts them so `initial` is re-applied. The cost is that
+ * blocks currently on screen replay their reveal when the language changes,
+ * which is a reasonable way to present a full-page text swap anyway.
+ *
+ * The key belongs on the two components that OWN a whileInView trigger, never
+ * on RevealItem alone. RevealItem has no trigger of its own — it is driven by
+ * its group by variant name — so remounting just the child under a group that
+ * has already fired its once:true trigger leaves the child sitting at "hidden"
+ * with nothing left to tell it to show. That is not theoretical: it blanked
+ * every item in an already-revealed grid the moment the language was switched.
+ * Keying the group remounts parent and children together, so the trigger
+ * re-arms and the children come with it. */
+function variantsFor(from: RevealFrom, dir: 'ltr' | 'rtl'): Variants {
+  const inlineStart = dir === 'rtl' ? TRAVEL : -TRAVEL
+  const offset =
+    from === 'up' ? { y: TRAVEL } : { x: from === 'start' ? inlineStart : -inlineStart }
+
+  return {
+    hidden: { opacity: 0, ...offset },
+    show: {
+      opacity: 1,
+      x: 0,
+      y: 0,
+      transition: { duration: 0.9, ease: EASE },
+    },
+  }
+}
+
+const VIEWPORT = { once: true, margin: '-15% 0px -10% 0px' } as const
+
+/* The lock glow: a faint accent bloom that swells and fades as the heading
+ * settles, the supporting echo of the intro's lock beat. Two deliberate
+ * limits, because this is the part most able to look cheap:
+ *
+ *  - Headings only, never per-card. Six cards in a grid each flashing is
+ *    noise, not a motif.
+ *  - Skipped under prefers-reduced-motion. MotionConfig's reducedMotion="user"
+ *    suppresses transforms but NOT opacity, so a pulsing glow would otherwise
+ *    survive the setting that exists to stop exactly this. */
+function LockGlow() {
+  return (
+    <motion.span
+      aria-hidden
+      className="pointer-events-none absolute left-1/2 top-1/2 -z-10 block h-[160%] w-[130%] -translate-x-1/2 -translate-y-1/2 rounded-[50%] motion-reduce:hidden"
+      style={{
+        background:
+          'radial-gradient(closest-side, color-mix(in oklch, var(--accent) 22%, transparent), transparent)',
+      }}
+      variants={{
+        hidden: { opacity: 0 },
+        show: {
+          opacity: [0, 0.35, 0],
+          transition: { duration: 1.5, ease: 'easeOut', times: [0, 0.45, 1] },
+        },
+      }}
+    />
+  )
 }
 
 export function Reveal({
   children,
   className,
   delay = 0,
+  from = 'up',
+  /** Adds the lock-glow echo behind this block. Headings only. */
+  lock = false,
 }: {
   children: ReactNode
   className?: string
   delay?: number
+  from?: RevealFrom
+  lock?: boolean
 }) {
+  const { dir } = useLang()
+
   return (
     <motion.div
-      className={className}
+      key={dir}
+      // `relative` only when the glow needs a containing block, so no existing
+      // caller silently gains a new positioning context.
+      className={cn(lock && 'relative', className)}
       initial="hidden"
       whileInView="show"
-      viewport={{ once: true, margin: '-15% 0px -10% 0px' }}
-      variants={itemVariants}
+      viewport={VIEWPORT}
+      variants={variantsFor(from, dir)}
       transition={{ delay, duration: 0.9, ease: EASE }}
     >
+      {lock && <LockGlow />}
       {children}
     </motion.div>
   )
@@ -52,12 +146,15 @@ export function RevealGroup({
   stagger?: number
   play?: boolean
 }) {
+  const { dir } = useLang()
+
   return (
     <motion.div
+      key={dir}
       className={className}
       initial="hidden"
       {...(play ? { whileInView: 'show' as const } : { animate: 'hidden' as const })}
-      viewport={{ once: true, margin: '-15% 0px -10% 0px' }}
+      viewport={VIEWPORT}
       variants={{ show: { transition: { staggerChildren: stagger } } }}
     >
       {children}
@@ -65,9 +162,22 @@ export function RevealGroup({
   )
 }
 
-export function RevealItem({ children, className }: { children: ReactNode; className?: string }) {
+export function RevealItem({
+  children,
+  className,
+  from = 'up',
+}: {
+  children: ReactNode
+  className?: string
+  from?: RevealFrom
+}) {
+  const { dir } = useLang()
+
+  // No viewport config of its own: the parent RevealGroup drives it by variant
+  // name, which is what lets each child carry a different direction while the
+  // group still owns the stagger.
   return (
-    <motion.div className={className} variants={itemVariants}>
+    <motion.div className={className} variants={variantsFor(from, dir)}>
       {children}
     </motion.div>
   )
