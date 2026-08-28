@@ -70,10 +70,10 @@ const en: Dict = {
     cta: 'Book a Call',
   },
   hero: {
-    eyebrow: 'Dental & Aesthetic Clinics — Gulf',
+    eyebrow: 'Clinics of Every Kind — Saudi Arabia',
     h1a: 'We build the better version of your website.',
     h1b: 'Then we ask if you want it.',
-    sub: 'We find dental and aesthetic clinics running on broken or outdated sites and start rebuilding before we ever pitch you — book a quick call and watch the new version live, before you spend a cent.',
+    sub: 'We find clinics running on broken or outdated sites and start rebuilding before we ever pitch you — book a quick call and watch the new version live, before you spend a cent.',
     cta: 'Book a Call',
     stat1l: 'Sites rebuilt',
     stat3l: 'Upfront to see it built',
@@ -129,7 +129,7 @@ const en: Dict = {
   },
   footer: {
     tagline: 'We build it first. You decide after.',
-    legalLine: 'ZayloGear Agency is directed by',
+    legalLine: 'Zaylo Agency is directed by',
     rights: 'All rights reserved.',
   },
 }
@@ -143,10 +143,10 @@ const ar: Dict = {
     cta: 'احجز مكالمة',
   },
   hero: {
-    eyebrow: 'متخصصون في مواقع العيادات السنية والتجميلية — الخليج',
+    eyebrow: 'متخصصون في مواقع العيادات بكل تخصصاتها — السعودية',
     h1a: 'نبني لك نسخة أفضل من موقعك.',
     h1b: 'بعدين نسألك إذا تبيها.',
-    sub: 'نلقى العيادات السنية والتجميلية اللي موقعها قديم أو معطل ونبدأ نبنيه قبل لا نسوّق لك رسميًا — احجز مكالمة سريعة وشوف النسخة الجديدة شغالة أمامك، قبل ما تدفع ريال.',
+    sub: 'نلقى العيادات اللي موقعها قديم أو معطل ونبدأ نبنيه قبل لا نسوّق لك رسميًا — احجز مكالمة سريعة وشوف النسخة الجديدة شغالة أمامك، قبل ما تدفع ريال.',
     cta: 'احجز مكالمة',
     stat1l: 'موقع أعدنا بناءه',
     stat3l: 'مقدّم مالي لترى الموقع جاهزًا',
@@ -202,7 +202,7 @@ const ar: Dict = {
   },
   footer: {
     tagline: 'نبنيه أول. أنت تقرر بعدين.',
-    legalLine: 'وكالة زايلوجير يديرها',
+    legalLine: 'وكالة زايلو يديرها',
     rights: 'جميع الحقوق محفوظة.',
   },
 }
