@@ -97,6 +97,55 @@ function reflectorProfile(radius: number): THREE.Vector2[] {
   ]
 }
 
+/* The beam's falloff.
+ *
+ * A cone with a single flat opacity has a hard rim where it ends, which reads
+ * as the edge of a lampshade rather than as light running out. ConeGeometry's
+ * uv.y runs 1 at the apex to 0 at the open base, so fading on (1 - uv.y) takes
+ * the alpha to zero exactly at that rim and the edge stops existing. The
+ * exponent shapes how quickly the throw dies — above 1 it stays bright near
+ * the lamp and falls away faster further out, which is how a real spill looks. */
+const BEAM_VERTEX = /* glsl */ `
+  varying vec2 vUv;
+  void main() {
+    vUv = uv;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  }
+`
+
+const BEAM_FRAGMENT = /* glsl */ `
+  uniform float uOpacity;
+  uniform vec3 uColor;
+  varying vec2 vUv;
+
+  void main() {
+    float t = 1.0 - vUv.y;
+    float falloff = pow(1.0 - t, 1.6);
+    gl_FragColor = vec4(uColor, uOpacity * falloff);
+  }
+`
+
+function useBeamMaterial(color: THREE.Color) {
+  const material = useMemo(
+    () =>
+      new THREE.ShaderMaterial({
+        transparent: true,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+        side: THREE.DoubleSide,
+        uniforms: {
+          uOpacity: { value: 0 },
+          uColor: { value: color },
+        },
+        vertexShader: BEAM_VERTEX,
+        fragmentShader: BEAM_FRAGMENT,
+      }),
+    [color],
+  )
+  useEffect(() => () => material.dispose(), [material])
+  return material
+}
+
 type Layout = {
   halfW: number
   halfH: number
@@ -118,22 +167,46 @@ const LAYOUTS: Record<SceneTier, Layout> = {
   full: {
     halfW: 2.4,
     halfH: 3.05,
-    head: 1.8,
+    head: 1.72,
     segments: 64,
     sparkles: { count: 26, scale: [9, 6, 5] },
   },
   compact: {
     halfW: 2.1,
     halfH: 2.65,
-    head: 1.5,
+    head: 1.45,
     segments: 32,
     sparkles: { count: 12, scale: [6, 6, 4] },
   },
 }
 
-// Slow enough to read as an object being presented, not a spinning logo.
-const IDLE_PERIOD = 44
+/* Idle motion is a slow sway, not a full revolution.
+ *
+ * A reflector is a directional object: its whole point is the lit interior,
+ * and a continuous 360deg spin spends half of every cycle showing the camera
+ * the blank back of the dish. Swaying through a limited arc around a
+ * three-quarter pose keeps the emitter and the polished inner cone facing the
+ * viewer the entire time, while still reading as the object slowly turning.
+ * Full rotation is still available — it's what dragging does. */
+const IDLE_PERIOD = 26
+const IDLE_YAW_AMPLITUDE = 0.5
+// Parked slightly off head-on, so the dish reads as a three-quarter view with
+// visible depth rather than as a flat circle.
+const IDLE_YAW_CENTER = -0.26
 const REST_TILT_X = -0.12
+
+/* Pitch of the reflector head.
+ *
+ * Negative on purpose. The dish's opening faces its local -Y, and rotating
+ * about +X by a POSITIVE angle carries that axis toward -Z — away from the
+ * camera — so a positive tilt shows the viewer the back of the reflector and
+ * hides the emitter entirely. Negative swings the opening toward +Z instead.
+ * The camera also sits only ~10deg below the head, so the tilt is doing nearly
+ * all the work of revealing the interior. Kept to a three-quarter angle rather
+ * than head-on: swung further (tested at -0.62) the dish foreshortens into a
+ * flat disc with no depth, and the beam — then pointing straight at the
+ * camera — reads as a large soft disc rather than a throw of light. */
+const HEAD_TILT_X = -0.26
 // How far a drag can push the head off level, so it can never wind up looking
 // at the back of its own base.
 const PITCH_LIMIT = 0.55
@@ -265,7 +338,6 @@ function ExamLight({
   const spot = useRef<THREE.SpotLight>(null)
   const spotTarget = useRef<THREE.Object3D>(null)
   const emitterMat = useRef<THREE.MeshBasicMaterial>(null!)
-  const beamMat = useRef<THREE.MeshBasicMaterial>(null!)
   const glowMat = useRef<THREE.MeshBasicMaterial>(null!)
   const housingMat = useRef<THREE.MeshStandardMaterial>(null!)
   const innerMat = useRef<THREE.MeshStandardMaterial>(null!)
@@ -274,6 +346,8 @@ function ExamLight({
   const head = layout.head
   const seg = layout.segments
   const compact = tier === 'compact'
+
+  const beamMaterial = useBeamMaterial(palette.foreground)
 
   const dishGeometry = useMemo(
     () => new THREE.LatheGeometry(reflectorProfile(head), seg),
@@ -324,7 +398,7 @@ function ExamLight({
       d.pitch = THREE.MathUtils.lerp(d.pitch, 0, IDLE_RESUME * delta)
     }
 
-    const idleYaw = (elapsed / IDLE_PERIOD) * Math.PI * 2
+    const idleYaw = IDLE_YAW_CENTER + Math.sin((elapsed / IDLE_PERIOD) * Math.PI * 2) * IDLE_YAW_AMPLITUDE
     g.rotation.y = idleYaw + d.yaw + pointer.current.x * 0.18
     g.rotation.x = THREE.MathUtils.lerp(
       g.rotation.x,
@@ -345,14 +419,14 @@ function ExamLight({
     const power = intro * flutter
 
     if (emitterMat.current) emitterMat.current.opacity = (0.35 + 0.65 * power) * fade
-    if (glowMat.current) glowMat.current.opacity = 0.5 * power * fade
-    if (beamMat.current) beamMat.current.opacity = 0.11 * power * fade
+    if (glowMat.current) glowMat.current.opacity = 0.72 * power * fade
+    beamMaterial.uniforms.uOpacity.value = 0.2 * power * fade
     if (spot.current) spot.current.intensity = 17 * power * fade
     if (housingMat.current) housingMat.current.opacity = fade
     if (innerMat.current) {
       innerMat.current.opacity = fade
       // The dish interior picks up its own bounce as the lamp comes up.
-      innerMat.current.emissiveIntensity = 0.15 + 0.85 * power
+      innerMat.current.emissiveIntensity = 0.55 + 2.4 * power
     }
     if (steelMat.current) steelMat.current.opacity = fade
   })
@@ -364,7 +438,7 @@ function ExamLight({
       {/* Head: reflector dish, emitter, and the beam it throws. Tilted so the
           light points down and forward, the way an exam light is actually
           posed over a chair. */}
-      <group position={[0, head * 0.95, head * 0.15]} rotation={[0.5, 0, 0]}>
+      <group position={[0, head * 0.95, head * 0.15]} rotation={[HEAD_TILT_X, 0, 0]}>
         {/* Outer shell. Enamelled, not chromed: at high metalness the housing
             has almost no albedo of its own and simply mirrors a deliberately
             dark environment, which rendered the whole lamp as a black
@@ -390,7 +464,7 @@ function ExamLight({
             metalness={0.9}
             roughness={0.12}
             emissive={palette.foreground}
-            emissiveIntensity={0.15}
+            emissiveIntensity={0.55}
             side={THREE.BackSide}
             transparent
           />
@@ -405,7 +479,7 @@ function ExamLight({
         {/* The emitter itself. toneMapped={false} so Bloom treats it as a real
             source rather than a bright grey disc. */}
         <mesh position={[0, -head * 0.34, 0]} rotation={[Math.PI / 2, 0, 0]}>
-          <circleGeometry args={[head * 0.52, seg]} />
+          <circleGeometry args={[head * 0.62, seg]} />
           <meshBasicMaterial
             ref={emitterMat}
             color={palette.foreground}
@@ -435,18 +509,9 @@ function ExamLight({
         {/* The beam. An open cone, additive and depth-write-off so it layers
             rather than occludes. Kept faint: it sits behind body copy under
             the hero's dimming mask, where anything stronger fights the text. */}
-        <mesh position={[0, -head * 1.05, 0]}>
-          <coneGeometry args={[head * 0.95, head * 1.5, compact ? 24 : 48, 1, true]} />
-          <meshBasicMaterial
-            ref={beamMat}
-            color={palette.foreground}
-            transparent
-            opacity={0}
-            blending={THREE.AdditiveBlending}
-            depthWrite={false}
-            side={THREE.DoubleSide}
-            toneMapped={false}
-          />
+        <mesh position={[0, -head * 0.85, 0]}>
+          <coneGeometry args={[head * 0.72, head * 1.1, compact ? 24 : 48, 1, true]} />
+          <primitive object={beamMaterial} attach="material" />
         </mesh>
 
         {/* A real light, so the armature and base below are actually lit by the
@@ -465,7 +530,7 @@ function ExamLight({
 
         {/* Yoke: the knuckle the head pivots on. */}
         <mesh position={[0, head * 0.12, 0]} rotation={[0, 0, Math.PI / 2]}>
-          <cylinderGeometry args={[armThickness * 1.1, armThickness * 1.1, head * 0.95, compact ? 12 : 20]} />
+          <cylinderGeometry args={[armThickness * 0.9, armThickness * 0.9, head * 0.46, compact ? 12 : 20]} />
           <meshStandardMaterial color={HOUSING_DARK} metalness={0.85} roughness={0.35} />
         </mesh>
       </group>
