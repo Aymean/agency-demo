@@ -54,7 +54,7 @@ export function Portfolio() {
   return (
     <section id="work" className="border-t border-border py-16 md:py-24">
       <div className="mx-auto max-w-6xl px-6">
-        <Reveal className="mx-auto max-w-2xl text-center">
+        <Reveal lock className="mx-auto max-w-2xl text-center">
           <div className="type-eyebrow text-muted-foreground">{t.portfolio.kicker}</div>
           <h2 className="type-display mt-3 text-balance text-3xl sm:text-4xl md:text-[2.75rem]">
             {t.portfolio.heading}

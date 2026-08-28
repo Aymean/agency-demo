@@ -53,12 +53,15 @@ export function SiteNav() {
           </span>
         </motion.a>
 
-        <nav className="hidden items-center gap-8 text-sm text-muted-foreground md:flex">
+        <nav className="hidden items-center gap-7 text-sm text-muted-foreground md:flex">
           <button data-cursor="link" onClick={() => scrollToId('work')} className="transition-colors hover:text-foreground">
             {t.nav.work}
           </button>
           <button data-cursor="link" onClick={() => scrollToId('process')} className="transition-colors hover:text-foreground">
             {t.nav.process}
+          </button>
+          <button data-cursor="link" onClick={() => scrollToId('pricing')} className="transition-colors hover:text-foreground">
+            {t.nav.pricing}
           </button>
           <button data-cursor="link" onClick={() => scrollToId('contact')} className="transition-colors hover:text-foreground">
             {t.nav.contact}

@@ -6,6 +6,7 @@ type Dict = {
   nav: {
     work: string
     process: string
+    pricing: string
     contact: string
     cta: string
   }
@@ -36,6 +37,15 @@ type Dict = {
     heading: string
     steps: { n: string; title: string; desc: string }[]
   }
+  pricing: {
+    kicker: string
+    heading: string
+    /** Frames the range as a range. Never presented as a quote. */
+    sub: string
+    range: string
+    rangeNote: string
+    terms: { label: string; desc: string }[]
+  }
   contact: {
     kicker: string
     heading: string
@@ -55,6 +65,7 @@ const en: Dict = {
   nav: {
     work: 'Work',
     process: 'Process',
+    pricing: 'Pricing',
     contact: 'Contact',
     cta: 'Book a Call',
   },
@@ -96,6 +107,18 @@ const en: Dict = {
       },
     ],
   },
+  pricing: {
+    kicker: 'Pricing',
+    heading: 'It depends on the website you want.',
+    sub: 'Most builds land somewhere in this range. Where yours sits depends on how much site there is to build — pages, languages, booking, the things only your clinic needs. The exact number comes after we have talked, not before.',
+    range: '$3,000 - $10,000',
+    rangeNote: 'Typical project range',
+    terms: [
+      { label: '50% to start', desc: 'A deposit once you have seen the build and decided to go ahead.' },
+      { label: '50% before delivery', desc: 'The balance is due before the site goes live, not after.' },
+      { label: 'Live in under 24h', desc: 'Once the final payment clears, your site is live in less than a day.' },
+    ],
+  },
   contact: {
     kicker: 'Get In Touch',
     heading: 'Want to see what yours could look like?',
@@ -115,6 +138,7 @@ const ar: Dict = {
   nav: {
     work: 'أعمالنا',
     process: 'طريقة العمل',
+    pricing: 'الأسعار',
     contact: 'تواصل',
     cta: 'احجز مكالمة',
   },
@@ -154,6 +178,18 @@ const ar: Dict = {
         title: 'تشوفه شغال',
         desc: 'نوريك الموقع شغال معك مباشرة في المكالمة. إذا كان أفضل، نتكلم بالتفاصيل. إذا لا، ما خسرت شي وننسحب.',
       },
+    ],
+  },
+  pricing: {
+    kicker: 'الأسعار',
+    heading: 'يعتمد على الموقع اللي تبيه.',
+    sub: 'أغلب المشاريع تجي ضمن هذا النطاق. وين يوقف سعرك يعتمد على حجم الموقع نفسه — عدد الصفحات، اللغات، الحجز، والأشياء اللي تخص عيادتك بالذات. الرقم النهائي يجي بعد ما نتكلم، مو قبل.',
+    range: '$3,000 - $10,000',
+    rangeNote: 'النطاق المعتاد للمشروع',
+    terms: [
+      { label: '50% للبدء', desc: 'دفعة مقدّمة بعد ما تشوف الموقع وتقرر تكمل.' },
+      { label: '50% قبل التسليم', desc: 'الباقي يُدفع قبل ما ينزل الموقع، مو بعده.' },
+      { label: 'ينزل خلال أقل من 24 ساعة', desc: 'بعد ما توصلنا الدفعة الأخيرة، موقعك يصير شغّال بأقل من يوم.' },
     ],
   },
   contact: {

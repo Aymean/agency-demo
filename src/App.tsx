@@ -9,6 +9,7 @@ import { SiteNav } from '@/components/site-nav'
 import { Hero } from '@/components/hero'
 import { Portfolio } from '@/components/portfolio'
 import { Process } from '@/components/process'
+import { Pricing } from '@/components/pricing'
 import { Contact } from '@/components/contact'
 import { SiteFooter } from '@/components/site-footer'
 
@@ -26,6 +27,7 @@ function App() {
             <Hero />
             <Portfolio />
             <Process />
+            <Pricing />
             <Contact />
           </main>
           <SiteFooter />
