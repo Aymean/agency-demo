@@ -10,22 +10,26 @@ type Dict = {
     cta: string
   }
   hero: {
-    kicker: string
+    /** Specialisation line above the headline. Not a claim, a category. */
+    eyebrow: string
     h1a: string
     h1b: string
     sub: string
     cta: string
     stat1l: string
     stat2l: string
+    /** Label under the $0 promise seal — the seal itself carries the "$0". */
     stat3l: string
   }
   portfolio: {
     kicker: string
     heading: string
+    /** Carries the anonymisation disclaimer. It is stated here and nowhere
+     *  else — repeated on every card it stops reading as candour and starts
+     *  reading as a template gallery. */
     sub: string
     viewLabel: string
     dialogWhatWeFixed: string
-    dialogNote: string
     close: string
   }
   process: {
@@ -56,22 +60,21 @@ const en: Dict = {
     cta: 'Book a Call',
   },
   hero: {
-    kicker: '50+ real businesses redesigned — before they ever paid us',
+    eyebrow: 'Dental & Aesthetic Clinics — Gulf',
     h1a: 'We build the better version of your website.',
     h1b: 'Then we ask if you want it.',
-    sub: "We find local businesses running on broken or outdated sites and start rebuilding before we ever pitch you — book a quick call and watch the new version live, before you spend a cent.",
+    sub: 'We find dental and aesthetic clinics running on broken or outdated sites and start rebuilding before we ever pitch you — book a quick call and watch the new version live, before you spend a cent.',
     cta: 'Book a Call',
-    stat1l: 'Businesses redesigned',
-    stat2l: 'Industries covered',
+    stat1l: 'Sites rebuilt',
+    stat2l: 'Niches served',
     stat3l: 'Upfront to see it built',
   },
   portfolio: {
     kicker: 'The Work',
-    heading: '50+ redesigns. Real businesses. Real results.',
-    sub: "Every project below started as a cold-outreach redesign, built free before a single call was booked. Business names are shown as concepts to protect client confidentiality; the work itself is real.",
+    heading: '50+ rebuilds. Real clinics. Real problems fixed.',
+    sub: 'Every project below started as a cold-outreach rebuild, finished before a single call was booked. Client names and cities are removed to protect confidentiality — the sites, the ratings and the problems are real.',
     viewLabel: 'View',
     dialogWhatWeFixed: 'What we fixed',
-    dialogNote: 'Shown as a de-branded concept — real client identity is never used in our own marketing.',
     close: 'Close',
   },
   process: {
@@ -81,12 +84,12 @@ const en: Dict = {
       {
         n: '01',
         title: 'We find the site',
-        desc: "We look for local businesses running on a broken, outdated, or dead website — the kind that's quietly costing them customers.",
+        desc: "We look for clinics running on a broken, outdated, or dead website — the kind that's quietly costing them patients.",
       },
       {
         n: '02',
         title: 'We build it free',
-        desc: "No payment upfront, no commitment. We tell you your new site is already underway, get a quick call on the books, and finish building it in time to show you live.",
+        desc: 'No payment upfront, no commitment. We tell you your new site is already underway, get a quick call on the books, and finish building it in time to show you live.',
       },
       {
         n: '03',
@@ -98,7 +101,7 @@ const en: Dict = {
   contact: {
     kicker: 'Get In Touch',
     heading: 'Want to see what yours could look like?',
-    sub: "Tell us about your business and we'll show you, free — no strings, no pressure.",
+    sub: "Tell us about your clinic and we'll show you, free — no strings, no pressure.",
     cta: 'Book a Call',
     emailLabel: 'Email',
     whatsappLabel: 'WhatsApp',
@@ -118,22 +121,21 @@ const ar: Dict = {
     cta: 'احجز مكالمة',
   },
   hero: {
-    kicker: '+50 مشروعًا حقيقيًا أعدنا تصميمه — قبل ما ناخذ منهم ريال',
+    eyebrow: 'متخصصون في مواقع العيادات السنية والتجميلية — الخليج',
     h1a: 'نبني لك نسخة أفضل من موقعك.',
     h1b: 'بعدين نسألك إذا تبيها.',
-    sub: 'نلقى الشركات المحلية اللي موقعها قديم أو معطل ونبدأ نبنيه قبل لا نسوّق لك رسميًا — احجز مكالمة سريعة وشوف النسخة الجديدة شغالة أمامك، قبل ما تدفع ريال.',
+    sub: 'نلقى العيادات السنية والتجميلية اللي موقعها قديم أو معطل ونبدأ نبنيه قبل لا نسوّق لك رسميًا — احجز مكالمة سريعة وشوف النسخة الجديدة شغالة أمامك، قبل ما تدفع ريال.',
     cta: 'احجز مكالمة',
-    stat1l: 'مشروع أعدنا تصميمه',
-    stat2l: 'مجالات مختلفة',
+    stat1l: 'موقع أعدنا بناءه',
+    stat2l: 'مجالات نخدمها',
     stat3l: 'مقدّم مالي لترى الموقع جاهزًا',
   },
   portfolio: {
     kicker: 'أعمالنا',
-    heading: '+50 إعادة تصميم. شركات حقيقية. نتائج حقيقية.',
-    sub: 'كل مشروع تحت بدأ كإعادة تصميم مجانية بنيناها قبل ما نحجز أي مكالمة. أسماء الشركات معروضة كنماذج عامة حفاظًا على خصوصية العملاء — لكن الشغل نفسه حقيقي 100%.',
+    heading: '+50 إعادة بناء. عيادات حقيقية. مشاكل حقيقية انحلّت.',
+    sub: 'كل مشروع تحت بدأ كإعادة بناء ضمن تواصل بارد، خلّصناه قبل ما نحجز أي مكالمة. أسماء العملاء ومدنهم محذوفة حفاظًا على خصوصيتهم — أما المواقع والتقييمات والمشاكل فحقيقية 100%.',
     viewLabel: 'عرض',
     dialogWhatWeFixed: 'اللي صلحناه',
-    dialogNote: 'معروض كنموذج مجرّد من الهوية — ما نستخدم هوية العميل الحقيقية في تسويقنا الخاص أبدًا.',
     close: 'إغلاق',
   },
   process: {
@@ -143,7 +145,7 @@ const ar: Dict = {
       {
         n: '01',
         title: 'نلقى الموقع',
-        desc: 'ندور على شركات محلية موقعها معطل، قديم، أو متوقف — النوع اللي يخسرهم عملاء بصمت.',
+        desc: 'ندور على عيادات موقعها معطل، قديم، أو متوقف — النوع اللي يخسرهم مراجعين بصمت.',
       },
       {
         n: '02',
@@ -160,7 +162,7 @@ const ar: Dict = {
   contact: {
     kicker: 'تواصل معنا',
     heading: 'تبي تشوف شكل موقعك الجديد؟',
-    sub: 'قول لنا عن شركتك ونورّيك مجانًا — بدون التزام وبدون ضغط.',
+    sub: 'قول لنا عن عيادتك ونورّيك مجانًا — بدون التزام وبدون ضغط.',
     cta: 'احجز مكالمة',
     emailLabel: 'الإيميل',
     whatsappLabel: 'واتساب',

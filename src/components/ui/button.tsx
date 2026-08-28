@@ -9,6 +9,9 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default: "bg-primary text-primary-foreground hover:bg-primary/80",
+        // The site-wide call to action. Teal fill on dark ink: the one place
+        // the precision accent is allowed to occupy a whole element.
+        cta: "bg-accent text-accent-foreground hover:bg-[color-mix(in_oklch,var(--accent),black_12%)]",
         outline:
           "border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
         secondary:

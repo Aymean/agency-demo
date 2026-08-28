@@ -14,7 +14,7 @@ export function SiteFooter() {
             src="/logo-white.png"
             alt="ZayloGear"
             className="h-9 w-9"
-            style={{ filter: 'drop-shadow(0 0 6px color-mix(in oklch, var(--signal) 35%, transparent))' }}
+            style={{ filter: 'drop-shadow(0 0 6px color-mix(in oklch, var(--accent) 35%, transparent))' }}
           />
           <div className="text-xs text-muted-foreground">{t.footer.tagline}</div>
         </div>

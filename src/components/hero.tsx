@@ -19,7 +19,7 @@ const EASE = [0.16, 1, 0.3, 1] as const
 // constants — it was chunk-load-time PLUS all of this, additive, on every
 // visit slower than a fast broadband connection. The headline now runs on
 // its own short fixed timer (see HEADLINE_DELAY below); this sequence is
-// purely the 3D panel's own internal beat, played whenever it's ready, as a
+// purely the instrument's own internal beat, played whenever it's ready, as a
 // background flourish rather than a blocking intro.
 // Near-zero, not 0: the scene's materials/shaders compile lazily on their
 // first real render, which lands right around when sceneReady flips and
@@ -29,19 +29,18 @@ const EASE = [0.16, 1, 0.3, 1] as const
 const SWEEP_DELAY = 0.05
 const SWEEP_DURATION = 0.6
 // The resolve used to wait for the sweep to finish its full crossing
-// (SWEEP_DELAY + SWEEP_DURATION = ~0.9s) before the bricks started forming
-// at all — that read as "load, see an empty/glitching panel, then finally
-// something happens" instead of the panel visibly building itself from the
+// (SWEEP_DELAY + SWEEP_DURATION = ~0.9s) before the object started forming
+// at all — that read as "load, see an empty/glitching shape, then finally
+// something happens" instead of it visibly calibrating itself from the
 // first moment it's on screen. The resolve now starts at the same instant
-// the sweep does; the sweep still visually crosses the panel over its own
+// the sweep does; the sweep still visually crosses the object over its own
 // duration, it's just no longer a gate the resolve sits behind.
 const RESOLVE_AT = SWEEP_DELAY
-// The shader already resolves cell-by-cell in a staggered pattern (each
-// cell has its own hash-derived threshold along uProgress — see
-// SCREEN_FRAGMENT in hero-scene.tsx). At 0.42s that stagger was too fast to
-// actually perceive as individual blocks snapping in; this is purely the
-// resolve beat's own pacing and doesn't touch HEADLINE_DELAY below, which
-// stays on its own independent clock.
+// The shader already resolves mark-by-mark in a staggered pattern (each tick
+// lights as the scan angle reaches it — see TICK_FRAGMENT in hero-scene.tsx).
+// At 0.42s that stagger was too fast to perceive as individual graduations
+// coming up; this is purely the resolve beat's own pacing and doesn't touch
+// HEADLINE_DELAY below, which stays on its own independent clock.
 const RESOLVE_DURATION = 2.0
 
 const HEADLINE_DELAY = 0.3
@@ -66,7 +65,7 @@ function scrollToId(id: string) {
 // text stack (kicker through stats) fills 70-90% of a short hero's height,
 // so a mask that fully hides the scene there doesn't just protect text, it
 // hides almost the entire 3D scene on almost every real viewport — which is
-// what "the animation is completely missing" turned out to mean: the panel
+// what "the animation is completely missing" turned out to mean: the scene
 // was rendering fine, it was masked to zero alpha under nearly all of the
 // content. Dimming instead of hiding keeps it visibly present everywhere,
 // while still cutting its contrast enough for text on top to read clearly.
@@ -78,9 +77,9 @@ const FALLBACK_MASK =
 // Dims the WebGL scene down behind the actual text block instead of a fixed,
 // hand-tuned ellipse. A fixed shape only fit the proportions of one layout
 // (desktop) — on mobile the same text stack takes up a much taller fraction
-// of a much shorter hero, so the old ellipse left the panel's edge showing
-// above the headline and its grid pattern showing straight through the
-// subhead at full brightness. Measuring the real content box makes this
+// of a much shorter hero, so the old ellipse left the object's edge showing
+// above the headline and its detail showing straight through the subhead at
+// full brightness. Measuring the real content box makes this
 // correct for any viewport and either language automatically.
 //
 // This is a full-width horizontal band (linear, top-to-bottom), not a radial
@@ -125,15 +124,20 @@ function useContentMask(sectionRef: RefObject<HTMLElement | null>, contentRef: R
   return mask
 }
 
+// Two real counters, and only two. The row used to carry a third tile — "$0 /
+// upfront to see it built" — rendered identically to its neighbours, and a
+// zero sitting in a line of count-ups doesn't read as a promise, it reads as a
+// counter that failed to start. The $0 claim now gets its own seal (see
+// ZeroSeal) so it can't be mistaken for a broken number again.
 const STATS = [
-  { value: 50, prefix: '', suffix: '+' },
-  { value: 4, prefix: '', suffix: '' },
-  { value: 0, prefix: '$', suffix: '' },
+  { value: 50, suffix: '+' },
+  // The true niche count: dental, aesthetic, real estate, interior design.
+  { value: 4, suffix: '' },
 ]
 
 export function Hero() {
   const { t, dir } = useLang()
-  const labels = [t.hero.stat1l, t.hero.stat2l, t.hero.stat3l]
+  const labels = [t.hero.stat1l, t.hero.stat2l]
   const show3D = useShouldRender3D()
   const heroRef = useRef<HTMLElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
@@ -145,7 +149,7 @@ export function Hero() {
   const [headlinePlay, setHeadlinePlay] = useState(false)
   const [mountScene, setMountScene] = useState(false)
 
-  // The 3D panel's own glitch -> resolved beat. Starts when the scene is
+  // The instrument's own glitch -> calibrated beat. Starts when the scene is
   // actually on screen (not on mount, so it can't play out over a blank
   // canvas) but no longer gates anything else — the headline has already
   // appeared by the time most connections get here.
@@ -202,19 +206,23 @@ export function Hero() {
               inset-y-15%..85%, the same band the mask hides to protect text
               legibility, so a masked sweep is mathematically invisible on
               every viewport where the mask is doing its job. It's a one-shot
-              0.6s beat, not a persistent legibility risk like the static
-              panel, so it doesn't need the same protection. */}
+              0.6s beat, not a persistent legibility risk like the instrument
+              itself, so it doesn't need the same protection. */}
           {sceneReady && <PulseSweep dir={dir} />}
         </>
       )}
       <div ref={contentRef}>
         <RevealGroup className="mx-auto max-w-4xl px-6 text-center" stagger={0.1}>
-          <RevealItem className="mb-6 inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-1.5 text-xs font-medium text-muted-foreground">
+          {/* Specialisation, stated before the hook. To a clinic owner "the
+              agency that only does clinics" is a stronger signal than any
+              claim the headline could make, so it goes first — and it keeps
+              the PulseDot, which doubles as the scene's ready indicator. */}
+          <RevealItem className="mb-5 flex items-center justify-center gap-2.5">
             <PulseDot active={!show3D || resolved} />
-            {t.hero.kicker}
+            <span className="type-eyebrow text-accent">{t.hero.eyebrow}</span>
           </RevealItem>
 
-          <h1 className="text-balance text-4xl font-semibold tracking-tight sm:text-5xl md:text-6xl">
+          <h1 className="type-display text-balance text-[2.6rem] sm:text-6xl md:text-7xl">
             <TextReveal text={t.hero.h1a} play={headlinePlay} />
             <TextReveal text={t.hero.h1b} play={headlinePlay} delay={0.13} className="text-muted-foreground" />
           </h1>
@@ -227,18 +235,20 @@ export function Hero() {
 
           <RevealItem className="mt-8 flex items-center justify-center">
             <Magnetic>
-              <Button data-cursor="link" size="lg" onClick={() => scrollToId('contact')} className="px-8">
+              <Button data-cursor="link" variant="cta" size="lg" onClick={() => scrollToId('contact')} className="px-8">
                 {t.hero.cta}
               </Button>
             </Magnetic>
           </RevealItem>
 
-          <RevealItem className="mx-auto mt-12 grid max-w-lg grid-cols-3 gap-6 border-t border-border pt-6">
-            <dl className="contents">
+          <RevealItem className="mx-auto mt-12 flex max-w-xl flex-col items-center gap-7 border-t border-border pt-7 sm:flex-row sm:justify-center sm:gap-8">
+            <dl className="flex items-start justify-center gap-8 sm:gap-9">
               {STATS.map((stat, i) => (
                 <StatCell key={i} {...stat} label={labels[i]} />
               ))}
             </dl>
+            <div aria-hidden className="hidden h-11 w-px shrink-0 bg-border sm:block" />
+            <ZeroSeal label={t.hero.stat3l} />
           </RevealItem>
         </RevealGroup>
       </div>
@@ -246,8 +256,8 @@ export function Hero() {
   )
 }
 
-// Reads as an EKG scanline: sweeps once across the broken mockup on load, and
-// its arrival is the beat that snaps the panel from glitch to resolved.
+// The scan line: sweeps once across the instrument on load, and its arrival is
+// the beat that starts the dial lighting its graduations.
 // Memoized so the `resolved` state flip in Hero (a sibling re-render) doesn't
 // re-render this and touch the one-shot mount animation below.
 const PulseSweep = memo(function PulseSweep({ dir }: { dir: 'ltr' | 'rtl' }) {
@@ -279,33 +289,49 @@ const PulseSweep = memo(function PulseSweep({ dir }: { dir: 'ltr' | 'rtl' }) {
       className="absolute inset-y-[15%] start-0 h-auto w-full will-change-transform"
       style={{ x, opacity }}
     >
-      <div className="h-full w-px bg-signal shadow-[0_0_18px_3px_var(--signal)]" />
+      <div className="h-full w-px bg-accent shadow-[0_0_18px_3px_var(--accent)]" />
     </motion.div>
   )
 })
 
-function StatCell({
-  value,
-  prefix,
-  suffix,
-  label,
-}: {
-  value: number
-  prefix: string
-  suffix: string
-  label: string
-}) {
+function StatCell({ value, suffix, label }: { value: number; suffix: string; label: string }) {
   const { ref, value: animated } = useCountUp(value)
 
   return (
     <div>
       <dt className="sr-only">{label}</dt>
-      <dd ref={ref as never} className="text-2xl font-semibold tabular-nums tracking-tight sm:text-3xl">
-        {prefix}
+      <dd
+        ref={ref as never}
+        className="text-3xl font-semibold text-accent tabular-nums tracking-tight sm:text-4xl"
+      >
         {animated}
         {suffix}
       </dd>
-      <div className="mt-1 text-xs text-muted-foreground">{label}</div>
+      <div className="mt-1 max-w-[8.5rem] text-xs text-muted-foreground">{label}</div>
+    </div>
+  )
+}
+
+// The zero-risk promise, deliberately built as a stamped seal rather than a
+// third counter: a ring, the only champagne accent on the screen, and no
+// tabular-nums treatment that would let it pass for a running total. The "$0"
+// is dir-locked because in an RTL paragraph the currency mark would otherwise
+// be free to reorder around the digit.
+function ZeroSeal({ label }: { label: string }) {
+  return (
+    <div className="flex items-center gap-3">
+      <span className="relative inline-flex size-14 shrink-0 items-center justify-center rounded-full border border-accent-premium/45 bg-accent-premium/[0.07] text-accent-premium">
+        <span
+          aria-hidden
+          className="absolute inset-[3px] rounded-full border border-dashed border-accent-premium/25"
+        />
+        <span dir="ltr" className="text-lg font-semibold">
+          $0
+        </span>
+      </span>
+      <span className="max-w-[9.5rem] text-start text-xs leading-snug text-muted-foreground">
+        {label}
+      </span>
     </div>
   )
 }

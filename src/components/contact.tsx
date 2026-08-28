@@ -15,11 +15,11 @@ export function Contact() {
   return (
     <section id="contact" className="border-t border-border py-16 md:py-24">
       <Reveal className="mx-auto max-w-2xl px-6 text-center">
-        <div className="flex items-center justify-center gap-2 text-xs font-semibold tracking-widest text-muted-foreground uppercase">
+        <div className="type-eyebrow flex items-center justify-center gap-2 text-muted-foreground">
           <PulseDot speed="slow" />
           {t.contact.kicker}
         </div>
-        <h2 className="mt-3 text-balance text-3xl font-semibold tracking-tight sm:text-4xl">
+        <h2 className="type-display mt-3 text-balance text-3xl sm:text-4xl md:text-[2.75rem]">
           {t.contact.heading}
         </h2>
         <p className="mt-4 text-pretty text-muted-foreground">{t.contact.sub}</p>
@@ -28,6 +28,7 @@ export function Contact() {
           <Magnetic>
             <Button
               data-cursor="link"
+              variant="cta"
               size="lg"
               className="px-8"
               nativeButton={false}

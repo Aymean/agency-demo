@@ -7,7 +7,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
-import { Badge } from '@/components/ui/badge'
 import { BrowserMockup } from '@/components/browser-mockup'
 import { Reveal, RevealGroup, RevealItem } from '@/components/reveal'
 import { useLang } from '@/lib/i18n'
@@ -56,10 +55,8 @@ export function Portfolio() {
     <section id="work" className="border-t border-border py-16 md:py-24">
       <div className="mx-auto max-w-6xl px-6">
         <Reveal className="mx-auto max-w-2xl text-center">
-          <div className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">
-            {t.portfolio.kicker}
-          </div>
-          <h2 className="mt-3 text-balance text-3xl font-semibold tracking-tight sm:text-4xl">
+          <div className="type-eyebrow text-muted-foreground">{t.portfolio.kicker}</div>
+          <h2 className="type-display mt-3 text-balance text-3xl sm:text-4xl md:text-[2.75rem]">
             {t.portfolio.heading}
           </h2>
           <p className="mt-4 text-pretty text-muted-foreground">{t.portfolio.sub}</p>
@@ -90,7 +87,7 @@ export function Portfolio() {
                         <ScreenWipe />
                         <div
                           aria-hidden
-                          className="pointer-events-none absolute inset-x-0 top-0 z-20 h-0.5 origin-left scale-x-0 bg-signal shadow-[0_0_8px_var(--signal)] transition-transform duration-500 ease-out group-hover:scale-x-100"
+                          className="pointer-events-none absolute inset-x-0 top-0 z-20 h-0.5 origin-left scale-x-0 bg-accent shadow-[0_0_8px_var(--accent)] transition-transform duration-500 ease-out group-hover:scale-x-100"
                         />
                       </div>
                     </motion.div>
@@ -98,7 +95,12 @@ export function Portfolio() {
                   <div className="mt-4 flex items-start justify-between gap-3">
                     <div>
                       <div className="font-medium">{item.label[lang]}</div>
-                      <div className="mt-0.5 text-sm text-muted-foreground">{item.region[lang]}</div>
+                      {/* The specific thing that was broken, per client. This
+                          line is why the grid reads as fifty real rescues and
+                          not as a set of layout samples. */}
+                      <div className="mt-1 text-sm text-pretty text-muted-foreground">
+                        {item.hook[lang]}
+                      </div>
                     </div>
                     <span className="mt-0.5 shrink-0 text-sm font-medium text-muted-foreground transition-colors group-hover:text-foreground">
                       {t.portfolio.viewLabel} →
@@ -130,22 +132,13 @@ function CaseDetail({ item }: { item: PortfolioItem }) {
         viewportClassName="h-[52vh] sm:h-[58vh]"
       />
       <DialogHeader>
-        <div className="flex flex-wrap items-center gap-2">
-          <DialogTitle className="text-lg">{item.label[lang]}</DialogTitle>
-          <Badge variant="secondary" className="shrink-0">
-            {item.region[lang]}
-          </Badge>
-        </div>
+        <DialogTitle className="text-lg">{item.label[lang]}</DialogTitle>
         <div className="space-y-3 pt-1">
-          <div>
-            <div className="text-xs font-semibold tracking-wide text-foreground uppercase">
-              {t.portfolio.dialogWhatWeFixed}
-            </div>
-            <p className="mt-1 text-sm text-muted-foreground">{item.descriptor[lang]}</p>
+          <p className="text-sm text-pretty text-foreground">{item.hook[lang]}</p>
+          <div className="border-t border-border pt-3">
+            <div className="type-eyebrow text-accent">{t.portfolio.dialogWhatWeFixed}</div>
+            <p className="mt-1.5 text-sm text-muted-foreground">{item.descriptor[lang]}</p>
           </div>
-          <p className="border-t border-border pt-3 text-xs text-muted-foreground/80">
-            {t.portfolio.dialogNote}
-          </p>
         </div>
       </DialogHeader>
     </>

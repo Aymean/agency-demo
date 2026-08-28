@@ -1,8 +1,8 @@
-import { ProcessIcon } from '@/components/process-icon'
+import { ProcessIcon, type ProcessIconVariant } from '@/components/process-icon'
 import { Reveal, RevealGroup, RevealItem } from '@/components/reveal'
 import { useLang } from '@/lib/i18n'
 
-const ICON_VARIANTS = ['flatline', 'rising', 'signal'] as const
+const ICON_VARIANTS: ProcessIconVariant[] = ['radar', 'gauge', 'lock']
 
 export function Process() {
   const { t } = useLang()
@@ -11,10 +11,10 @@ export function Process() {
     <section id="process" className="border-t border-border bg-secondary/40 py-16 md:py-24">
       <div className="mx-auto max-w-6xl px-6">
         <Reveal className="mx-auto max-w-2xl text-center">
-          <div className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">
+          <div className="type-eyebrow text-muted-foreground">
             {t.process.kicker}
           </div>
-          <h2 className="mt-3 text-balance text-3xl font-semibold tracking-tight sm:text-4xl">
+          <h2 className="type-display mt-3 text-balance text-3xl sm:text-4xl md:text-[2.75rem]">
             {t.process.heading}
           </h2>
         </Reveal>

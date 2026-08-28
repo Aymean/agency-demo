@@ -64,7 +64,7 @@ export function ScrollPulseSpine() {
       <motion.div
         aria-hidden
         className={cn(
-          'absolute w-px origin-top bg-signal shadow-[0_0_6px_var(--signal)]',
+          'absolute w-px origin-top bg-accent shadow-[0_0_6px_var(--accent)]',
           dir === 'rtl' ? 'right-2' : 'left-2',
         )}
         style={{ top: TRACK_TOP, height: TRACK_HEIGHT, scaleY: progress }}

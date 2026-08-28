@@ -18,7 +18,7 @@ export function PulseDot({
       {active && (
         <span
           className={cn(
-            'absolute inline-flex size-full animate-ping rounded-full bg-signal opacity-75 motion-reduce:hidden',
+            'absolute inline-flex size-full animate-ping rounded-full bg-accent opacity-75 motion-reduce:hidden',
             speed === 'slow' && '[animation-duration:2.4s]',
           )}
         />
@@ -27,7 +27,7 @@ export function PulseDot({
         className={cn(
           'relative inline-flex rounded-full transition-colors duration-[800ms]',
           dim,
-          active ? 'bg-signal' : 'bg-muted-foreground/40',
+          active ? 'bg-accent' : 'bg-muted-foreground/40',
         )}
       />
     </span>

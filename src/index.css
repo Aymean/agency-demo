@@ -8,6 +8,10 @@
 @import "@fontsource/ibm-plex-sans-arabic/500.css";
 @import "@fontsource/ibm-plex-sans-arabic/600.css";
 @import "@fontsource/ibm-plex-sans-arabic/700.css";
+/* Latin display face, headline scale only — see .type-display. The `opsz` cut
+   (not `wght`) because the optical-size axis is what gives Fraunces its
+   editorial stroke contrast at 48px+; font-optical-sizing below drives it. */
+@import "@fontsource-variable/fraunces/opsz.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -15,6 +19,8 @@
     --font-heading: var(--font-sans);
     --font-sans: 'IBM Plex Sans Variable', 'IBM Plex Sans Arabic', system-ui, sans-serif;
     --font-sans-ar: 'IBM Plex Sans Arabic', 'IBM Plex Sans Variable', system-ui, sans-serif;
+    /* Never applied to Arabic text — .type-display gates it to [dir="ltr"]. */
+    --font-display: 'Fraunces Variable', 'IBM Plex Sans Variable', Georgia, serif;
     --color-sidebar-ring: var(--sidebar-ring);
     --color-sidebar-border: var(--sidebar-border);
     --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -34,6 +40,8 @@
     --color-destructive: var(--destructive);
     --color-accent-foreground: var(--accent-foreground);
     --color-accent: var(--accent);
+    --color-accent-premium: var(--accent-premium);
+    --color-accent-premium-foreground: var(--accent-premium-foreground);
     --color-muted-foreground: var(--muted-foreground);
     --color-muted: var(--muted);
     --color-secondary-foreground: var(--secondary-foreground);
@@ -46,8 +54,6 @@
     --color-card: var(--card);
     --color-foreground: var(--foreground);
     --color-background: var(--background);
-    --color-signal: var(--signal);
-    --color-signal-foreground: var(--signal-foreground);
     --radius-sm: calc(var(--radius) * 0.6);
     --radius-md: calc(var(--radius) * 0.8);
     --radius-lg: var(--radius);
@@ -57,77 +63,91 @@
     --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/* Light mode is not reachable in this build: index.html hard-codes class="dark"
+   on <html> and there is no theme toggle anywhere in the UI. It is kept on the
+   same cool hue family (250) and the same two accents as .dark below, so that
+   if that class is ever dropped the page degrades to a consistent palette
+   rather than the shadcn warm-gray default it used to hold. */
 :root {
-    --background: oklch(0.985 0.003 90);
-    --foreground: oklch(0.16 0.006 90);
+    --background: oklch(0.985 0.004 250);
+    --foreground: oklch(0.17 0.012 250);
     --card: oklch(1 0 0);
-    --card-foreground: oklch(0.16 0.006 90);
+    --card-foreground: oklch(0.17 0.012 250);
     --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.16 0.006 90);
-    --primary: oklch(0.16 0.006 90);
-    --primary-foreground: oklch(0.985 0.003 90);
-    --secondary: oklch(0.955 0.004 90);
-    --secondary-foreground: oklch(0.16 0.006 90);
-    --muted: oklch(0.955 0.004 90);
-    --muted-foreground: oklch(0.48 0.006 90);
-    --accent: oklch(0.955 0.004 90);
-    --accent-foreground: oklch(0.16 0.006 90);
+    --popover-foreground: oklch(0.17 0.012 250);
+    --primary: oklch(0.17 0.012 250);
+    --primary-foreground: oklch(0.985 0.004 250);
+    --secondary: oklch(0.955 0.006 250);
+    --secondary-foreground: oklch(0.17 0.012 250);
+    --muted: oklch(0.955 0.006 250);
+    --muted-foreground: oklch(0.47 0.012 250);
+    --accent: oklch(0.58 0.12 185);
+    --accent-foreground: oklch(0.99 0.01 185);
+    --accent-premium: oklch(0.58 0.07 85);
+    --accent-premium-foreground: oklch(0.99 0.01 85);
     --destructive: oklch(0.577 0.245 27.325);
-    --border: oklch(0.9 0.004 90);
-    --input: oklch(0.9 0.004 90);
-    --ring: oklch(0.16 0.006 90 / 30%);
-    --signal: oklch(0.6 0.13 155);
-    --signal-foreground: oklch(0.99 0.01 155);
-    --chart-1: oklch(0.87 0 0);
-    --chart-2: oklch(0.556 0 0);
-    --chart-3: oklch(0.439 0 0);
-    --chart-4: oklch(0.371 0 0);
-    --chart-5: oklch(0.269 0 0);
+    --border: oklch(0.9 0.006 250);
+    --input: oklch(0.9 0.006 250);
+    --ring: oklch(0.58 0.12 185 / 40%);
+    --chart-1: oklch(0.58 0.12 185);
+    --chart-2: oklch(0.58 0.07 85);
+    --chart-3: oklch(0.47 0.012 250);
+    --chart-4: oklch(0.37 0.012 250);
+    --chart-5: oklch(0.27 0.012 250);
     --radius: 0.5rem;
-    --sidebar: oklch(0.985 0.003 90);
-    --sidebar-foreground: oklch(0.16 0.006 90);
-    --sidebar-primary: oklch(0.16 0.006 90);
-    --sidebar-primary-foreground: oklch(0.985 0.003 90);
-    --sidebar-accent: oklch(0.955 0.004 90);
-    --sidebar-accent-foreground: oklch(0.16 0.006 90);
-    --sidebar-border: oklch(0.9 0.004 90);
-    --sidebar-ring: oklch(0.16 0.006 90 / 30%);
+    --sidebar: oklch(0.985 0.004 250);
+    --sidebar-foreground: oklch(0.17 0.012 250);
+    --sidebar-primary: oklch(0.17 0.012 250);
+    --sidebar-primary-foreground: oklch(0.985 0.004 250);
+    --sidebar-accent: oklch(0.955 0.006 250);
+    --sidebar-accent-foreground: oklch(0.17 0.012 250);
+    --sidebar-border: oklch(0.9 0.006 250);
+    --sidebar-ring: oklch(0.58 0.12 185 / 40%);
 }
 
+/* Clinical precision meets premium editorial.
+
+   Cool graphite-ink base with warm off-white text — warm-on-cool is what keeps
+   a dark UI from reading as generic dark mode. Exactly two accents:
+
+     --accent          teal. The precision/trust signal: CTAs, the eyebrow, the
+                       count-up numbers, the instrument's rim light. Nothing else.
+     --accent-premium  champagne. Rationed to the $0 promise seal and the one
+                       stat suffix beside it. A third use on a screen is a bug. */
 .dark {
-    --background: oklch(0.145 0.004 90);
-    --foreground: oklch(0.97 0.003 90);
-    --card: oklch(0.19 0.004 90);
-    --card-foreground: oklch(0.97 0.003 90);
-    --popover: oklch(0.19 0.004 90);
-    --popover-foreground: oklch(0.97 0.003 90);
-    --primary: oklch(0.97 0.003 90);
-    --primary-foreground: oklch(0.16 0.006 90);
-    --secondary: oklch(0.25 0.004 90);
-    --secondary-foreground: oklch(0.97 0.003 90);
-    --muted: oklch(0.25 0.004 90);
-    --muted-foreground: oklch(0.68 0.006 90);
-    --accent: oklch(0.25 0.004 90);
-    --accent-foreground: oklch(0.97 0.003 90);
+    --background: oklch(0.14 0.012 250);
+    --foreground: oklch(0.97 0.006 90);
+    --card: oklch(0.19 0.012 250);
+    --card-foreground: oklch(0.97 0.006 90);
+    --popover: oklch(0.19 0.012 250);
+    --popover-foreground: oklch(0.97 0.006 90);
+    --primary: oklch(0.97 0.006 90);
+    --primary-foreground: oklch(0.16 0.012 250);
+    --secondary: oklch(0.23 0.012 250);
+    --secondary-foreground: oklch(0.97 0.006 90);
+    --muted: oklch(0.23 0.012 250);
+    --muted-foreground: oklch(0.68 0.01 250);
+    --accent: oklch(0.78 0.16 185);
+    --accent-foreground: oklch(0.16 0.03 200);
+    --accent-premium: oklch(0.82 0.06 85);
+    --accent-premium-foreground: oklch(0.18 0.02 85);
     --destructive: oklch(0.704 0.191 22.216);
     --border: oklch(1 0 0 / 10%);
-    --input: oklch(1 0 0 / 15%);
-    --ring: oklch(1 0 0 / 25%);
-    --signal: oklch(0.72 0.15 155);
-    --signal-foreground: oklch(0.16 0.03 155);
-    --chart-1: oklch(0.87 0 0);
-    --chart-2: oklch(0.556 0 0);
-    --chart-3: oklch(0.439 0 0);
-    --chart-4: oklch(0.371 0 0);
-    --chart-5: oklch(0.269 0 0);
-    --sidebar: oklch(0.19 0.004 90);
-    --sidebar-foreground: oklch(0.97 0.003 90);
-    --sidebar-primary: oklch(0.97 0.003 90);
-    --sidebar-primary-foreground: oklch(0.16 0.006 90);
-    --sidebar-accent: oklch(0.25 0.004 90);
-    --sidebar-accent-foreground: oklch(0.97 0.003 90);
+    --input: oklch(1 0 0 / 14%);
+    --ring: oklch(0.78 0.16 185 / 45%);
+    --chart-1: oklch(0.78 0.16 185);
+    --chart-2: oklch(0.82 0.06 85);
+    --chart-3: oklch(0.68 0.01 250);
+    --chart-4: oklch(0.45 0.012 250);
+    --chart-5: oklch(0.3 0.012 250);
+    --sidebar: oklch(0.19 0.012 250);
+    --sidebar-foreground: oklch(0.97 0.006 90);
+    --sidebar-primary: oklch(0.97 0.006 90);
+    --sidebar-primary-foreground: oklch(0.16 0.012 250);
+    --sidebar-accent: oklch(0.23 0.012 250);
+    --sidebar-accent-foreground: oklch(0.97 0.006 90);
     --sidebar-border: oklch(1 0 0 / 10%);
-    --sidebar-ring: oklch(1 0 0 / 25%);
+    --sidebar-ring: oklch(0.78 0.16 185 / 45%);
 }
 
 @layer base {
@@ -143,6 +163,78 @@
   html[dir="rtl"] body {
     font-family: var(--font-sans-ar);
     }
+}
+
+/* ---------------------------------------------------------------------------
+   Typography
+
+   Both treatments below are direction-scoped on purpose. Letter-spacing,
+   uppercasing and the serif face are Latin-only devices: Arabic is a joined
+   script, so tracking drags glyphs into the connectors either side of them,
+   and text-transform does nothing at all except signal that nobody checked.
+   Every rule here therefore ships an explicit [dir="rtl"] counterpart instead
+   of letting the Latin one inherit through.
+   --------------------------------------------------------------------------- */
+
+/* Headline scale only: the hero h1 and the section h2s. Line-height is owned
+   here rather than by a Tailwind leading-* utility, because the correct value
+   differs per script by a wide margin and a single number cannot serve both. */
+.type-display {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+html[dir="ltr"] .type-display {
+  font-family: var(--font-display);
+  font-weight: 460;
+  font-optical-sizing: auto;
+  letter-spacing: -0.022em;
+  line-height: 1.05;
+}
+
+/* Arabic deliberately does NOT get a display serif substituted in. Pairing an
+   unrelated Arabic display face against Fraunces buys nothing but a legibility
+   risk; the same confident register comes from IBM Plex Sans Arabic at its
+   heaviest cut, oversized, with only a hair of tightening. */
+html[dir="rtl"] .type-display {
+  font-family: var(--font-sans-ar);
+  font-weight: 700;
+  letter-spacing: -0.006em;
+  /* Arabic carries far more vertical extent than Latin at the same size, and
+     the reveal animation clips each line to its own box — at Latin display
+     leading the ascenders and descenders were being cut clean off. */
+  line-height: 1.32;
+}
+
+/* The hero headline's reveal animation clips each line to its own overflow box,
+   which means the line box is the only thing standing between a descender and
+   a haircut. Both scripts overflow it at any leading that actually looks like
+   display type — Fraunces' descenders by ~5px at 72px, Arabic's by ~4px — so
+   the clip box gets a little room below the baseline and immediately gives it
+   back to the layout. Tight leading survives, nothing gets beheaded.
+   Only matches the reveal spans inside the h1; section h2s have no child span. */
+.type-display > span {
+  padding-bottom: 0.16em;
+  margin-bottom: -0.16em;
+}
+
+/* The small label above a headline, and the section kickers. */
+.type-eyebrow {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+html[dir="ltr"] .type-eyebrow {
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+html[dir="rtl"] .type-eyebrow {
+  font-size: 0.75rem;
+  letter-spacing: normal;
+  text-transform: none;
 }
 
 @media (hover: hover) and (pointer: fine) {

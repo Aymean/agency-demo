@@ -58,7 +58,7 @@ export function SiteNav() {
             {lang === 'en' ? 'AR' : 'EN'}
           </button>
           <Magnetic className="hidden sm:inline-flex" strength={0.3}>
-            <Button data-cursor="link" size="sm" onClick={() => scrollToId('contact')}>
+            <Button data-cursor="link" variant="cta" size="sm" onClick={() => scrollToId('contact')}>
               {t.nav.cta}
             </Button>
           </Magnetic>
