@@ -36,16 +36,27 @@ export function RevealGroup({
   children,
   className,
   stagger = 0.09,
+  /**
+   * Same external cue as TextReveal's `play`, for the same reason. A group
+   * that is already inside the viewport fires the moment it mounts, which is
+   * wrong when something is covering the page — the hero sits in view behind
+   * the intro overlay and would spend its whole reveal there, so by the time
+   * the overlay lifted there'd be nothing left to reveal. Holding it at
+   * "hidden" until the cue arrives keeps the stagger for the moment it's
+   * actually visible. Defaults true, so every other caller is unaffected.
+   */
+  play = true,
 }: {
   children: ReactNode
   className?: string
   stagger?: number
+  play?: boolean
 }) {
   return (
     <motion.div
       className={className}
       initial="hidden"
-      whileInView="show"
+      {...(play ? { whileInView: 'show' as const } : { animate: 'hidden' as const })}
       viewport={{ once: true, margin: '-15% 0px -10% 0px' }}
       variants={{ show: { transition: { staggerChildren: stagger } } }}
     >

@@ -6,6 +6,7 @@ import { PulseDot } from '@/components/pulse-dot'
 import { RevealGroup, RevealItem, TextReveal } from '@/components/reveal'
 import { useCountUp } from '@/lib/use-count-up'
 import { useShouldRender3D } from '@/lib/use-should-render-3d'
+import { useIntro } from '@/lib/intro'
 import { useLang } from '@/lib/i18n'
 
 const HeroScene = lazy(() => import('@/components/hero-scene').then((m) => ({ default: m.HeroScene })))
@@ -129,15 +130,17 @@ function useContentMask(sectionRef: RefObject<HTMLElement | null>, contentRef: R
 // zero sitting in a line of count-ups doesn't read as a promise, it reads as a
 // counter that failed to start. The $0 claim now gets its own seal (see
 // ZeroSeal) so it can't be mistaken for a broken number again.
-const STATS = [
-  { value: 50, suffix: '+' },
-  // The true niche count: dental, aesthetic, real estate, interior design.
-  { value: 4, suffix: '' },
-]
+// One counter, beside the seal. There used to be a second tile carrying a
+// niche count (4 — dental, aesthetic, real estate, interior design); the niche
+// is now every clinic type rather than a fixed list of verticals, so counting
+// them measures nothing. It was dropped outright rather than backfilled with
+// another number for the sake of symmetry.
+const STATS = [{ value: 80, suffix: '+' }]
 
 export function Hero() {
   const { t, dir } = useLang()
-  const labels = [t.hero.stat1l, t.hero.stat2l]
+  const { contentReady } = useIntro()
+  const labels = [t.hero.stat1l]
   const show3D = useShouldRender3D()
   const heroRef = useRef<HTMLElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
@@ -162,20 +165,35 @@ export function Hero() {
     return () => clearTimeout(resolveTimer)
   }, [show3D, sceneReady, introProgress])
 
+  // Both timers below start from the intro's resolve beat rather than from
+  // mount. Counting from mount would have burned them down behind the intro
+  // overlay, so the hero would be sitting fully revealed the instant the
+  // overlay lifted — there'd be nothing left to hand off to. Worse for
+  // SCENE_MOUNT_DELAY specifically: it would fire the ~960KB three.js import
+  // *during* the intro, and that chunk's parse cost on the main thread is
+  // exactly the contention the comment above it exists to avoid — it would
+  // have starved the intro's own animation instead of the headline's.
+  //
+  // `contentReady` is true from first paint when there is no intro (repeat
+  // visit, reduced motion), so the original mount-relative timing is preserved
+  // unchanged on those loads.
+
   // Headline copy on a short fixed timer, independent of the 3D scene's load
   // state entirely — the primary content should never wait on a decorative
   // asset, regardless of how slow that asset's chunk is to fetch.
   useEffect(() => {
+    if (!contentReady) return
     const timer = setTimeout(() => setHeadlinePlay(true), HEADLINE_DELAY * 1000)
     return () => clearTimeout(timer)
-  }, [])
+  }, [contentReady])
 
   // Don't even start the 3D scene's dynamic import until the headline is
   // done — see SCENE_MOUNT_DELAY above.
   useEffect(() => {
+    if (!contentReady) return
     const timer = setTimeout(() => setMountScene(true), SCENE_MOUNT_DELAY * 1000)
     return () => clearTimeout(timer)
-  }, [])
+  }, [contentReady])
 
   return (
     <section
@@ -212,7 +230,7 @@ export function Hero() {
         </>
       )}
       <div ref={contentRef}>
-        <RevealGroup className="mx-auto max-w-4xl px-6 text-center" stagger={0.1}>
+        <RevealGroup className="mx-auto max-w-4xl px-6 text-center" stagger={0.1} play={contentReady}>
           {/* Specialisation, stated before the hook. To a clinic owner "the
               agency that only does clinics" is a stronger signal than any
               claim the headline could make, so it goes first — and it keeps
@@ -241,7 +259,10 @@ export function Hero() {
             </Magnetic>
           </RevealItem>
 
-          <RevealItem className="mx-auto mt-12 flex max-w-xl flex-col items-center gap-7 border-t border-border pt-7 sm:flex-row sm:justify-center sm:gap-8">
+          {/* Narrower than it was: the row carried two counters plus the seal,
+              and at max-w-xl a single counter leaves the group floating apart
+              rather than reading as one credential block. */}
+          <RevealItem className="mx-auto mt-12 flex max-w-md flex-col items-center gap-7 border-t border-border pt-7 sm:flex-row sm:justify-center sm:gap-8">
             <dl className="flex items-start justify-center gap-8 sm:gap-9">
               {STATS.map((stat, i) => (
                 <StatCell key={i} {...stat} label={labels[i]} />
@@ -286,7 +307,13 @@ const PulseSweep = memo(function PulseSweep({ dir }: { dir: 'ltr' | 'rtl' }) {
   return (
     <motion.div
       aria-hidden
-      className="absolute inset-y-[15%] start-0 h-auto w-full will-change-transform"
+      // pointer-events-none is load-bearing, not tidiness. This is an absolutely
+      // positioned, full-width band across the middle 70% of the hero, and it
+      // stays mounted after its one-shot sweep finishes. Being positioned, it
+      // paints above the static content wrapper, and opacity:0 does not stop an
+      // element receiving clicks — so without this it sits invisibly on top of
+      // the headline and the CTA and swallows every click on them.
+      className="pointer-events-none absolute inset-y-[15%] start-0 h-auto w-full will-change-transform"
       style={{ x, opacity }}
     >
       <div className="h-full w-px bg-accent shadow-[0_0_18px_3px_var(--accent)]" />

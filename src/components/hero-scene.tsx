@@ -52,145 +52,203 @@ function useScenePalette(): ScenePalette {
   )
 }
 
-// Brushed titanium. Deliberately not a token: this is a material, not brand
-// colour, and it only reads as metal because of what the environment below
-// puts into its reflections.
-const TITANIUM = '#b3bdc9'
+// Enamelled housing and brushed steel armature. Deliberately not tokens: these
+// are materials, not brand colour, and they only read as metal/enamel because
+// of what the environment rig below puts into their reflections.
+const STEEL = '#b7c0cb'
+const HOUSING = '#dfe5ec'
+const HOUSING_DARK = '#7f8b99'
 
-const TICK_VERTEX = /* glsl */ `
-  varying vec2 vPos;
-  void main() {
-    vPos = position.xy;
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-  }
-`
+/* The Hero centrepiece: an adjustable clinic exam light.
+ *
+ * Built from procedural primitives rather than a loaded model, for the same
+ * reason <Environment> uses local lightformers with frames={1} — the hero's
+ * chunk is already ~960KB, and a glTF would put another fetch on the critical
+ * path of a decorative asset that has to work offline.
+ *
+ * Deliberately a general exam light — the broad dished reflector, scissor
+ * armature and weighted base are common to dental, dermatology, laser and
+ * general medical rooms — rather than anything specialty-specific.
+ */
 
-// The engraved caliper scale around the instrument's circumference, and the
-// intro beat that lights it.
-//
-// This is the same glitch-to-resolve choreography the browser-mockup panels
-// used, moved from cartesian into polar: identical uniform set (uProgress /
-// uTime / uFade / uAccent / uForeground), identical hash-jitter flicker while
-// unresolved, identical "each cell has its own threshold along uProgress"
-// reveal. The only real change is that the threshold is now a tick's angle
-// rather than a grid cell's hash, which turns the staggered reveal into a scan
-// sweeping once around the dial and lighting each mark as it passes.
-const TICK_FRAGMENT = /* glsl */ `
-  uniform float uProgress;
-  uniform float uTime;
-  uniform float uFade;
-  uniform float uInner;
-  uniform float uOuter;
-  uniform vec3 uAccent;
-  uniform vec3 uForeground;
-  varying vec2 vPos;
-
-  const float PI = 3.14159265359;
-  const float TICKS = 72.0;
-
-  float hash(float p) {
-    return fract(sin(p * 78.233) * 43758.5453);
-  }
-
-  void main() {
-    float r = length(vPos);
-    float band = clamp((r - uInner) / (uOuter - uInner), 0.0, 1.0);
-
-    // 0..1 clockwise from 12 o'clock, so the sweep starts where a gauge would.
-    float t = fract((atan(vPos.x, vPos.y) / (2.0 * PI)) + 1.0);
-
-    float idx = floor(t * TICKS);
-    float cell = fract(t * TICKS);
-    float major = step(mod(idx, 6.0), 0.5);
-
-    // Majors run deeper into the band and sit a touch wider, like a caliper's
-    // labelled divisions against its minor graduations.
-    float len = mix(0.42, 0.92, major);
-    float halfWidth = mix(0.13, 0.2, major);
-    float d = abs(cell - 0.5) * 2.0;
-    // Hung inward from the outer edge, so every graduation meets the rule.
-    float mark = (1.0 - smoothstep(halfWidth, halfWidth + 0.09, d)) * step(1.0 - len, band);
-
-    // Hairline rule at the outer edge of the scale, always present.
-    float rule = 1.0 - smoothstep(0.0, 0.055, abs(band - 1.0));
-
-    float lit = smoothstep(uProgress + 0.015, uProgress - 0.015, t);
-    float edge = smoothstep(0.07, 0.0, abs(t - uProgress)) * (1.0 - step(1.0, uProgress));
-
-    // Unlit marks jitter, exactly as the unresolved panel cells used to.
-    float flicker = mix(0.45, 1.0, step(0.5, hash(idx + floor(uTime * 6.0))));
-    float breathe = 0.94 + 0.06 * sin(uTime * 0.9 + idx * 0.2);
-
-    vec3 dim = uForeground * 0.32;
-    vec3 color = mix(dim, uAccent, max(lit, edge));
-
-    float alpha = mark * mix(0.26 * flicker, 0.92 * breathe, lit);
-    alpha += mark * edge * 0.85;
-    alpha += rule * mix(0.12, 0.4, lit) * 0.6;
-
-    gl_FragColor = vec4(color, alpha * uFade);
-  }
-`
-
-function useTickMaterial(accent: THREE.Color, foreground: THREE.Color, inner: number, outer: number) {
-  return useMemo(
-    () =>
-      new THREE.ShaderMaterial({
-        transparent: true,
-        depthWrite: false,
-        side: THREE.DoubleSide,
-        uniforms: {
-          uProgress: { value: 0 },
-          uTime: { value: 0 },
-          uFade: { value: 1 },
-          uInner: { value: inner },
-          uOuter: { value: outer },
-          uAccent: { value: accent },
-          uForeground: { value: foreground },
-        },
-        vertexShader: TICK_VERTEX,
-        fragmentShader: TICK_FRAGMENT,
-      }),
-    [accent, foreground, inner, outer],
-  )
+// Half-profile of the reflector dish, revolved by LatheGeometry. Points run
+// from the centre boss outward to the rim and then back along the outer shell,
+// so the dish has real thickness and a rim you can see the edge of rather than
+// being an infinitely thin shell that disappears edge-on.
+function reflectorProfile(radius: number): THREE.Vector2[] {
+  const r = radius
+  return [
+    new THREE.Vector2(0, -0.02 * r),
+    new THREE.Vector2(0.18 * r, -0.03 * r),
+    new THREE.Vector2(0.4 * r, -0.09 * r),
+    new THREE.Vector2(0.62 * r, -0.19 * r),
+    new THREE.Vector2(0.82 * r, -0.32 * r),
+    new THREE.Vector2(0.95 * r, -0.44 * r),
+    new THREE.Vector2(1.0 * r, -0.54 * r),
+    // Rim: out, back and up, giving the bezel a visible lip.
+    new THREE.Vector2(1.03 * r, -0.6 * r),
+    new THREE.Vector2(1.03 * r, -0.68 * r),
+    new THREE.Vector2(0.98 * r, -0.7 * r),
+    // Outer shell returning to the boss.
+    new THREE.Vector2(0.7 * r, -0.55 * r),
+    new THREE.Vector2(0.42 * r, -0.42 * r),
+    new THREE.Vector2(0.16 * r, -0.34 * r),
+    new THREE.Vector2(0.1 * r, -0.3 * r),
+  ]
 }
 
 type Layout = {
   halfW: number
   halfH: number
-  /** Outer radius of the main ring; everything else is derived from it. */
-  ring: number
-  segments: [number, number]
+  /** Reflector radius; every other dimension is derived from it. */
+  head: number
+  segments: number
   sparkles: { count: number; scale: [number, number, number] }
 }
 
 // One centred object in both tiers — the compact variant only shrinks it and
-// drops geometry/particle detail, so a phone gets the same instrument rather
-// than a separate flat substitute. halfW/halfH are the half-extents fed to the
-// camera fit below, so nothing crops at any canvas aspect ratio.
+// drops geometry/particle detail, so a phone gets the same light rather than a
+// separate flat substitute. halfW/halfH are the half-extents fed to the camera
+// fit below, so nothing crops at any canvas aspect ratio.
+// halfW/halfH must bound the WHOLE object, beam included — the camera fit
+// below frames to them, so anything they under-report simply runs off the
+// canvas. Measured against the assembly: the body spans roughly +/-1.6x head
+// vertically (dish top to base) and +/-1.1x horizontally.
 const LAYOUTS: Record<SceneTier, Layout> = {
   full: {
-    halfW: 3.5,
-    halfH: 3.1,
-    ring: 2.5,
-    segments: [16, 128],
+    halfW: 2.4,
+    halfH: 3.05,
+    head: 1.8,
+    segments: 64,
     sparkles: { count: 26, scale: [9, 6, 5] },
   },
   compact: {
-    halfW: 2.75,
-    halfH: 2.75,
-    ring: 2.05,
-    segments: [10, 72],
+    halfW: 2.1,
+    halfH: 2.65,
+    head: 1.5,
+    segments: 32,
     sparkles: { count: 12, scale: [6, 6, 4] },
   },
 }
 
-// Slow enough to read as an instrument idling rather than a spinning logo.
-const NEEDLE_PERIOD = 10.5
-const DIAL_PERIOD = 38
-const REST_TILT_X = -0.16
+// Slow enough to read as an object being presented, not a spinning logo.
+const IDLE_PERIOD = 44
+const REST_TILT_X = -0.12
+// How far a drag can push the head off level, so it can never wind up looking
+// at the back of its own base.
+const PITCH_LIMIT = 0.55
+// Per-frame decay applied to release velocity, and the rate the idle spin is
+// blended back in once the throw has died down.
+const INERTIA_DECAY = 0.94
+const IDLE_RESUME = 0.4
 
-function Instrument({
+type DragState = {
+  active: boolean
+  pointerId: number | null
+  lastX: number
+  lastY: number
+  velX: number
+  velY: number
+  /** Accumulated yaw/pitch the user has contributed, on top of the idle spin. */
+  yaw: number
+  pitch: number
+  engaged: boolean
+}
+
+/* Pointer-drag orbit.
+ *
+ * The canvas itself stays pointerEvents:'none' — it's a masked backdrop
+ * sitting behind the headline, subhead, CTA and stats, and letting it capture
+ * events would cost the copy its selectability and the CTA its clicks. So the
+ * gesture is read at the window instead, and declined whenever it starts on
+ * something that is actually interactive.
+ */
+function useDragOrbit(enabled: boolean) {
+  const state = useRef<DragState>({
+    active: false,
+    pointerId: null,
+    lastX: 0,
+    lastY: 0,
+    velX: 0,
+    velY: 0,
+    yaw: 0,
+    pitch: 0,
+    engaged: false,
+  })
+
+  useEffect(() => {
+    if (!enabled) return
+    const s = state.current
+
+    function onDown(e: PointerEvent) {
+      // Never steal a gesture aimed at real UI.
+      if (e.target instanceof Element && e.target.closest('a, button, input, textarea, select, [role="dialog"], [data-cursor="link"]')) {
+        return
+      }
+      // Only the hero's own area is a drag surface; below the fold the object
+      // is scrolled away and dragging it would be meaningless.
+      const hero = document.getElementById('top')
+      if (!hero) return
+      const rect = hero.getBoundingClientRect()
+      if (e.clientY < rect.top || e.clientY > rect.bottom) return
+
+      s.active = true
+      s.pointerId = e.pointerId
+      s.lastX = e.clientX
+      s.lastY = e.clientY
+      s.velX = 0
+      s.velY = 0
+      s.engaged = e.pointerType === 'mouse'
+    }
+
+    function onMove(e: PointerEvent) {
+      if (!s.active || e.pointerId !== s.pointerId) return
+      const dx = e.clientX - s.lastX
+      const dy = e.clientY - s.lastY
+
+      // Touch only commits once the gesture is clearly horizontal. Anything
+      // else is someone trying to scroll the page, and taking it would make
+      // the hero a dead zone on every phone.
+      if (!s.engaged) {
+        if (Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(dy)) s.engaged = true
+        else if (Math.abs(dy) > 8) {
+          s.active = false
+          return
+        }
+      }
+      if (!s.engaged) return
+
+      s.lastX = e.clientX
+      s.lastY = e.clientY
+      s.velX = dx * 0.005
+      s.velY = dy * 0.005
+      s.yaw += s.velX
+      s.pitch = THREE.MathUtils.clamp(s.pitch + s.velY, -PITCH_LIMIT, PITCH_LIMIT)
+    }
+
+    function onUp(e: PointerEvent) {
+      if (e.pointerId !== s.pointerId) return
+      s.active = false
+      s.pointerId = null
+      s.engaged = false
+    }
+
+    window.addEventListener('pointerdown', onDown)
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp)
+    window.addEventListener('pointercancel', onUp)
+    return () => {
+      window.removeEventListener('pointerdown', onDown)
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onUp)
+      window.removeEventListener('pointercancel', onUp)
+    }
+  }, [enabled])
+
+  return state
+}
+
+function ExamLight({
   scrollProgress,
   introProgress,
   palette,
@@ -204,22 +262,26 @@ function Instrument({
   tier: SceneTier
 }) {
   const root = useRef<THREE.Group>(null)
-  const dial = useRef<THREE.Group>(null)
-  const needle = useRef<THREE.Group>(null)
-  const rimMat = useRef<THREE.MeshBasicMaterial>(null!)
-  const metalMat = useRef<THREE.MeshStandardMaterial>(null!)
-  const hairlineMat = useRef<THREE.MeshStandardMaterial>(null!)
-  const glassMat = useRef<THREE.MeshPhysicalMaterial>(null!)
-  const tipMat = useRef<THREE.MeshBasicMaterial>(null!)
+  const spot = useRef<THREE.SpotLight>(null)
+  const spotTarget = useRef<THREE.Object3D>(null)
+  const emitterMat = useRef<THREE.MeshBasicMaterial>(null!)
+  const beamMat = useRef<THREE.MeshBasicMaterial>(null!)
+  const glowMat = useRef<THREE.MeshBasicMaterial>(null!)
+  const housingMat = useRef<THREE.MeshStandardMaterial>(null!)
+  const innerMat = useRef<THREE.MeshStandardMaterial>(null!)
+  const steelMat = useRef<THREE.MeshStandardMaterial>(null!)
 
-  const ring = layout.ring
-  const tickInner = ring * 0.78
-  const tickOuter = ring * 0.94
-  const tickMat = useTickMaterial(palette.accent, palette.foreground, tickInner, tickOuter)
+  const head = layout.head
+  const seg = layout.segments
+  const compact = tier === 'compact'
 
-  // Same pointer plumbing the mockup panel used, feeding a parallax tilt rather
-  // than any new interaction system: the magnetic cursor already teaches the
-  // page that things lean toward the pointer, and this just joins in.
+  const dishGeometry = useMemo(
+    () => new THREE.LatheGeometry(reflectorProfile(head), seg),
+    [head, seg],
+  )
+  useEffect(() => () => dishGeometry.dispose(), [dishGeometry])
+
+  const drag = useDragOrbit(!compact)
   const pointer = useRef({ x: 0, y: 0 })
   const clockStart = useRef<number | null>(null)
 
@@ -232,145 +294,272 @@ function Instrument({
     return () => window.removeEventListener('pointermove', onMove)
   }, [])
 
-  useFrame((state) => {
+  // The spotlight needs an explicit target object in the scene graph, or three
+  // aims it at the world origin regardless of how the head is posed.
+  useEffect(() => {
+    if (spot.current && spotTarget.current) spot.current.target = spotTarget.current
+  }, [])
+
+  useFrame((state, delta) => {
     const g = root.current
     if (!g) return
     if (clockStart.current === null) clockStart.current = state.clock.elapsedTime
     const elapsed = state.clock.elapsedTime - clockStart.current
     const p = scrollProgress.get()
     const intro = introProgress.get()
+    const d = drag.current
 
-    g.rotation.y = THREE.MathUtils.lerp(g.rotation.y, pointer.current.x * 0.34, 0.045)
-    g.rotation.x = THREE.MathUtils.lerp(g.rotation.x, REST_TILT_X - pointer.current.y * 0.2, 0.045)
+    if (!d.active) {
+      // Coast on release, then hand back to the idle spin. Tracking the coast
+      // as an offset rather than writing it into yaw keeps the ambient
+      // rotation continuous underneath instead of restarting from the throw.
+      d.yaw += d.velX
+      d.pitch = THREE.MathUtils.clamp(d.pitch + d.velY, -PITCH_LIMIT, PITCH_LIMIT)
+      d.velX *= INERTIA_DECAY
+      d.velY *= INERTIA_DECAY
+      if (Math.abs(d.velX) < 0.0002) d.velX = 0
+      if (Math.abs(d.velY) < 0.0002) d.velY = 0
+      // Ease the user's own pitch contribution back toward level so the object
+      // always returns to a presentable pose if left alone.
+      d.pitch = THREE.MathUtils.lerp(d.pitch, 0, IDLE_RESUME * delta)
+    }
+
+    const idleYaw = (elapsed / IDLE_PERIOD) * Math.PI * 2
+    g.rotation.y = idleYaw + d.yaw + pointer.current.x * 0.18
+    g.rotation.x = THREE.MathUtils.lerp(
+      g.rotation.x,
+      REST_TILT_X + d.pitch - pointer.current.y * 0.12,
+      0.08,
+    )
     g.position.y = Math.sin(elapsed * 0.3) * 0.06 - p * 2.6
     g.scale.setScalar(THREE.MathUtils.lerp(1, 0.58, p))
 
-    if (dial.current) dial.current.rotation.z = -(elapsed / DIAL_PERIOD) * Math.PI * 2
-
-    if (needle.current) {
-      // Barely moves while the scan is still running, then eases up to its full
-      // revolution as the instrument finishes calibrating — scaling the ambient
-      // angle by intro spins it up smoothly without a second timeline to keep
-      // in sync with the shader's.
-      const target = -(elapsed / NEEDLE_PERIOD) * Math.PI * 2 * intro - pointer.current.x * 0.3
-      needle.current.rotation.z = THREE.MathUtils.lerp(needle.current.rotation.z, target, 0.12)
-    }
-
     const fade = 1 - Math.min(p * 1.3, 1)
 
-    tickMat.uniforms.uProgress.value = intro
-    tickMat.uniforms.uTime.value = state.clock.elapsedTime
-    tickMat.uniforms.uFade.value = fade
+    // Power-on. `introProgress` is the same motion value the old object used
+    // for its scan-resolve, retimed here as the lamp coming up: the head sits
+    // dark and metallic, then the emitter, the spill and the beam all rise
+    // together. A shallow flutter on top keeps it from looking like a static
+    // emissive texture once it's fully on.
+    const flutter = 0.97 + 0.03 * Math.sin(elapsed * 1.7)
+    const power = intro * flutter
 
-    // Active-scan indicator: a shallow pulse, brightest while the sweep is
-    // still running, so the rim reads as powered rather than decorative.
-    const pulse = 0.3 + 0.14 * Math.sin(elapsed * 1.5) + (1 - intro) * 0.18
-    if (rimMat.current) rimMat.current.opacity = pulse * fade
-    if (tipMat.current) tipMat.current.opacity = (0.55 + 0.3 * Math.sin(elapsed * 1.5)) * fade
-    if (metalMat.current) metalMat.current.opacity = fade
-    if (hairlineMat.current) hairlineMat.current.opacity = 0.75 * fade
-    if (glassMat.current) glassMat.current.opacity = 0.16 * fade
+    if (emitterMat.current) emitterMat.current.opacity = (0.35 + 0.65 * power) * fade
+    if (glowMat.current) glowMat.current.opacity = 0.5 * power * fade
+    if (beamMat.current) beamMat.current.opacity = 0.11 * power * fade
+    if (spot.current) spot.current.intensity = 17 * power * fade
+    if (housingMat.current) housingMat.current.opacity = fade
+    if (innerMat.current) {
+      innerMat.current.opacity = fade
+      // The dish interior picks up its own bounce as the lamp comes up.
+      innerMat.current.emissiveIntensity = 0.15 + 0.85 * power
+    }
+    if (steelMat.current) steelMat.current.opacity = fade
   })
 
-  const [radialSeg, tubularSeg] = layout.segments
+  const armThickness = head * 0.085
 
   return (
-    <group ref={root}>
-      <group ref={dial}>
-        {/* Loupe body: the one heavy form in the composition. */}
-        <mesh>
-          <torusGeometry args={[ring, ring * 0.052, radialSeg, tubularSeg]} />
+    <group ref={root} position={[0, -head * 0.15, 0]}>
+      {/* Head: reflector dish, emitter, and the beam it throws. Tilted so the
+          light points down and forward, the way an exam light is actually
+          posed over a chair. */}
+      <group position={[0, head * 0.95, head * 0.15]} rotation={[0.5, 0, 0]}>
+        {/* Outer shell. Enamelled, not chromed: at high metalness the housing
+            has almost no albedo of its own and simply mirrors a deliberately
+            dark environment, which rendered the whole lamp as a black
+            silhouette. Dropping metalness lets the off-white actually show. */}
+        <mesh geometry={dishGeometry}>
           <meshStandardMaterial
-            ref={metalMat}
-            color={TITANIUM}
-            metalness={0.95}
-            roughness={0.31}
+            ref={housingMat}
+            color={HOUSING}
+            metalness={0.25}
+            roughness={0.42}
+            side={THREE.DoubleSide}
             transparent
           />
         </mesh>
 
-        {/* Emissive rim light sitting just inside the body — additive so Bloom
-            reads it as a glow rather than a painted-on ring. */}
-        <mesh>
-          <torusGeometry args={[ring * 0.965, ring * 0.014, 8, tubularSeg]} />
-          <meshBasicMaterial
-            ref={rimMat}
-            color={palette.accent}
-            transparent
-            opacity={0.3}
-            blending={THREE.AdditiveBlending}
-            depthWrite={false}
-            toneMapped={false}
-          />
-        </mesh>
-
-        {/* Engraved caliper scale. */}
-        <mesh position={[0, 0, 0.03]}>
-          <ringGeometry args={[tickInner, tickOuter, 160]} />
-          <primitive object={tickMat} attach="material" />
-        </mesh>
-
-        {/* Outer hairline, the way a machined bezel has a shoulder. */}
-        <mesh>
-          <torusGeometry args={[ring * 1.1, ring * 0.006, 6, tubularSeg]} />
+        {/* Polished inner cone, inset just inside the shell so the dish reads
+            as lined rather than as a single-skinned bowl. */}
+        <mesh position={[0, -head * 0.16, 0]} rotation={[Math.PI, 0, 0]}>
+          <coneGeometry args={[head * 0.9, head * 0.5, seg, 1, true]} />
           <meshStandardMaterial
-            ref={hairlineMat}
-            color={TITANIUM}
+            ref={innerMat}
+            color={HOUSING}
             metalness={0.9}
-            roughness={0.4}
+            roughness={0.12}
+            emissive={palette.foreground}
+            emissiveIntensity={0.15}
+            side={THREE.BackSide}
             transparent
-            opacity={0.75}
           />
         </mesh>
 
-        {/* Frosted lens. Kept as a plain translucent surface rather than real
-            transmission: transmission costs a render target every frame, and
-            this sits behind body copy at a third of its alpha, where nobody
-            will ever see the difference. */}
-        <mesh position={[0, 0, -0.02]}>
-          <circleGeometry args={[tickInner * 0.99, 96]} />
-          <meshPhysicalMaterial
-            ref={glassMat}
-            color="#9fb4c6"
-            roughness={0.55}
-            metalness={0.05}
-            clearcoat={0.6}
-            clearcoatRoughness={0.4}
+        {/* Rim band — the machined bezel edge. */}
+        <mesh position={[0, -head * 0.62, 0]} rotation={[Math.PI / 2, 0, 0]}>
+          <torusGeometry args={[head * 1.02, head * 0.028, 8, seg]} />
+          <meshStandardMaterial color={HOUSING_DARK} metalness={0.9} roughness={0.3} />
+        </mesh>
+
+        {/* The emitter itself. toneMapped={false} so Bloom treats it as a real
+            source rather than a bright grey disc. */}
+        <mesh position={[0, -head * 0.34, 0]} rotation={[Math.PI / 2, 0, 0]}>
+          <circleGeometry args={[head * 0.52, seg]} />
+          <meshBasicMaterial
+            ref={emitterMat}
+            color={palette.foreground}
             transparent
-            opacity={0.16}
+            opacity={0.25}
+            toneMapped={false}
             side={THREE.DoubleSide}
           />
         </mesh>
-      </group>
 
-      <group ref={needle}>
-        <mesh position={[0, ring * 0.38, 0.09]}>
-          <boxGeometry args={[ring * 0.022, ring * 0.76, ring * 0.018]} />
-          <meshStandardMaterial color={TITANIUM} metalness={0.92} roughness={0.28} />
-        </mesh>
-        {/* Counterweight — what makes it read as a balanced instrument needle
-            instead of a clock hand. */}
-        <mesh position={[0, -ring * 0.13, 0.09]}>
-          <boxGeometry args={[ring * 0.038, ring * 0.2, ring * 0.028]} />
-          <meshStandardMaterial color={TITANIUM} metalness={0.92} roughness={0.34} />
-        </mesh>
-        <mesh position={[0, ring * 0.77, 0.09]}>
-          <boxGeometry args={[ring * 0.03, ring * 0.06, ring * 0.03]} />
+        {/* Soft spill just under the emitter, tinted to the brand accent — the
+            one place the light picks up colour. */}
+        <mesh position={[0, -head * 0.4, 0]} rotation={[Math.PI / 2, 0, 0]}>
+          <circleGeometry args={[head * 0.92, seg]} />
           <meshBasicMaterial
-            ref={tipMat}
+            ref={glowMat}
             color={palette.accent}
             transparent
-            opacity={0.7}
+            opacity={0}
+            blending={THREE.AdditiveBlending}
+            depthWrite={false}
+            toneMapped={false}
+            side={THREE.DoubleSide}
+          />
+        </mesh>
+
+        {/* The beam. An open cone, additive and depth-write-off so it layers
+            rather than occludes. Kept faint: it sits behind body copy under
+            the hero's dimming mask, where anything stronger fights the text. */}
+        <mesh position={[0, -head * 1.05, 0]}>
+          <coneGeometry args={[head * 0.95, head * 1.5, compact ? 24 : 48, 1, true]} />
+          <meshBasicMaterial
+            ref={beamMat}
+            color={palette.foreground}
+            transparent
+            opacity={0}
+            blending={THREE.AdditiveBlending}
+            depthWrite={false}
+            side={THREE.DoubleSide}
             toneMapped={false}
           />
         </mesh>
+
+        {/* A real light, so the armature and base below are actually lit by the
+            lamp instead of merely appearing to be. */}
+        <spotLight
+          ref={spot}
+          position={[0, -head * 0.34, 0]}
+          angle={0.5}
+          penumbra={0.8}
+          distance={head * 14}
+          decay={1.4}
+          intensity={0}
+          color={palette.foreground}
+        />
+        <object3D ref={spotTarget} position={[0, -head * 6, 0]} />
+
+        {/* Yoke: the knuckle the head pivots on. */}
+        <mesh position={[0, head * 0.12, 0]} rotation={[0, 0, Math.PI / 2]}>
+          <cylinderGeometry args={[armThickness * 1.1, armThickness * 1.1, head * 0.95, compact ? 12 : 20]} />
+          <meshStandardMaterial color={HOUSING_DARK} metalness={0.85} roughness={0.35} />
+        </mesh>
       </group>
 
-      <mesh position={[0, 0, 0.1]} rotation={[Math.PI / 2, 0, 0]}>
-        <cylinderGeometry args={[ring * 0.062, ring * 0.062, ring * 0.05, tier === 'compact' ? 16 : 32]} />
-        <meshStandardMaterial color={TITANIUM} metalness={0.95} roughness={0.24} />
+      {/* Armature: two segments at an asymmetric fold, so the light reads as
+          adjustable from any angle rather than as a fixed sculpture. */}
+      <Arm
+        from={[0, head * 0.9, head * 0.12]}
+        to={[-head * 0.75, head * 0.1, -head * 0.1]}
+        thickness={armThickness}
+        segments={compact ? 8 : 16}
+        materialRef={steelMat}
+      />
+      <Arm
+        from={[-head * 0.75, head * 0.1, -head * 0.1]}
+        to={[0, -head * 0.95, -head * 0.05]}
+        thickness={armThickness * 0.92}
+        segments={compact ? 8 : 16}
+      />
+
+      {/* Joints. */}
+      <Joint position={[0, head * 0.9, head * 0.12]} radius={armThickness * 1.35} segments={compact ? 10 : 18} />
+      <Joint position={[-head * 0.75, head * 0.1, -head * 0.1]} radius={armThickness * 1.5} segments={compact ? 10 : 18} />
+
+      {/* Post and weighted base. */}
+      <mesh position={[0, -head * 1.15, -head * 0.05]}>
+        <cylinderGeometry args={[armThickness * 1.15, armThickness * 1.4, head * 0.45, compact ? 12 : 24]} />
+        <meshStandardMaterial color={STEEL} metalness={0.9} roughness={0.3} />
+      </mesh>
+      <mesh position={[0, -head * 1.4, -head * 0.05]}>
+        <cylinderGeometry args={[head * 0.62, head * 0.7, head * 0.11, compact ? 20 : 48]} />
+        <meshStandardMaterial color={HOUSING_DARK} metalness={0.8} roughness={0.35} />
       </mesh>
     </group>
+  )
+}
+
+/** A single armature segment, oriented to span two points. Cylinders are
+ *  built along +Y, so each one is placed at the midpoint and then rotated to
+ *  the direction vector — cheaper and steadier than posing a joint chain by
+ *  hand-tuned Euler angles. */
+function Arm({
+  from,
+  to,
+  thickness,
+  segments,
+  materialRef,
+}: {
+  from: [number, number, number]
+  to: [number, number, number]
+  thickness: number
+  segments: number
+  materialRef?: React.RefObject<THREE.MeshStandardMaterial>
+}) {
+  const { position, quaternion, length } = useMemo(() => {
+    const a = new THREE.Vector3(...from)
+    const b = new THREE.Vector3(...to)
+    const dir = new THREE.Vector3().subVectors(b, a)
+    const len = dir.length()
+    const q = new THREE.Quaternion().setFromUnitVectors(
+      new THREE.Vector3(0, 1, 0),
+      dir.clone().normalize(),
+    )
+    return { position: new THREE.Vector3().addVectors(a, b).multiplyScalar(0.5), quaternion: q, length: len }
+  }, [from, to])
+
+  return (
+    <mesh position={position} quaternion={quaternion}>
+      <cylinderGeometry args={[thickness, thickness, length, segments]} />
+      <meshStandardMaterial
+        ref={materialRef as never}
+        color={STEEL}
+        metalness={0.92}
+        roughness={0.26}
+        transparent
+      />
+    </mesh>
+  )
+}
+
+function Joint({
+  position,
+  radius,
+  segments,
+}: {
+  position: [number, number, number]
+  radius: number
+  segments: number
+}) {
+  return (
+    <mesh position={position}>
+      <sphereGeometry args={[radius, segments, segments]} />
+      <meshStandardMaterial color={HOUSING_DARK} metalness={0.9} roughness={0.28} />
+    </mesh>
   )
 }
 
@@ -421,13 +610,18 @@ export function HeroScene({
       dpr={compact ? 1 : [1, 1.5]}
       camera={{ position: [0, 0, 9.5], fov: 38 }}
       gl={{ alpha: true, antialias: !compact, powerPreference: 'high-performance' }}
+      // Stays 'none' even though the object is draggable. The drag is read at
+      // the window instead (see useDragOrbit) precisely so this canvas can go
+      // on ignoring pointer events — it spans the whole hero behind the
+      // headline, subhead, CTA and stats, and the moment it accepts events
+      // that copy stops being selectable and the CTA stops being clickable.
       style={{ pointerEvents: 'none' }}
       onCreated={() => onReady?.()}
     >
       <ResponsiveCamera halfW={layout.halfW} halfH={layout.halfH} />
-      <ambientLight intensity={0.35} />
-      <directionalLight position={[4, 6, 5]} intensity={1.1} />
-      <directionalLight position={[-5, -2, -4]} intensity={0.5} color={palette.accent} />
+      <ambientLight intensity={0.55} />
+      <directionalLight position={[4, 6, 5]} intensity={1.5} />
+      <directionalLight position={[-5, -2, -4]} intensity={0.6} color={palette.accent} />
 
       {/* Metal needs something to reflect. This environment is built from local
           lightformers and rendered exactly once (frames={1}) — no HDRI fetch,
@@ -453,7 +647,7 @@ export function HeroScene({
         <Lightformer form="circle" intensity={1.6} color={palette.accent} position={[4, -3, 3]} scale={3} />
       </Environment>
 
-      <Instrument
+      <ExamLight
         scrollProgress={scrollProgress}
         introProgress={introProgress}
         palette={palette}

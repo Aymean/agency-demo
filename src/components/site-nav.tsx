@@ -1,7 +1,9 @@
 import { useState } from 'react'
-import { useMotionValueEvent, useScroll } from 'motion/react'
+import { motion, useMotionValueEvent, useScroll } from 'motion/react'
 import { Button } from '@/components/ui/button'
 import { Magnetic } from '@/components/magnetic'
+import { ZayloMark } from '@/components/zaylo-mark'
+import { useIntro } from '@/lib/intro'
 import { useLang } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 
@@ -11,6 +13,7 @@ function scrollToId(id: string) {
 
 export function SiteNav() {
   const { t, lang, setLang } = useLang()
+  const { contentReady } = useIntro()
   const { scrollY } = useScroll()
   const [scrolled, setScrolled] = useState(false)
 
@@ -24,17 +27,31 @@ export function SiteNav() {
       )}
     >
       <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-6">
-        <a
+        {/* The permanent lockup the intro resolves into: the same three traced
+            paths that just assembled on screen, now at rest beside the
+            wordmark. It fades in on the intro's resolve beat and stays for the
+            session — when there's no intro to wait for (repeat visit, reduced
+            motion) contentReady is already true and it's simply present, with
+            no animation to flash. */}
+        <motion.a
           href="#top"
           onClick={(e) => {
             e.preventDefault()
             scrollToId('top')
           }}
           data-cursor="link"
-          className="flex items-center"
+          className="flex items-center gap-2.5"
+          initial={false}
+          animate={{ opacity: contentReady ? 1 : 0, y: contentReady ? 0 : -6 }}
+          transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
         >
-          <img src="/logo-white.png" alt="ZayloGear" className="h-8 w-8" />
-        </a>
+          <ZayloMark className="size-[26px] shrink-0" title="Zaylo Agency" />
+          {/* Direction-locked: a brand name should not reorder in RTL, the same
+              reasoning that dir-locks the "$0" seal in hero.tsx. */}
+          <span dir="ltr" className="type-eyebrow hidden text-foreground sm:inline">
+            Zaylo Agency
+          </span>
+        </motion.a>
 
         <nav className="hidden items-center gap-8 text-sm text-muted-foreground md:flex">
           <button data-cursor="link" onClick={() => scrollToId('work')} className="transition-colors hover:text-foreground">

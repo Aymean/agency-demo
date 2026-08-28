@@ -1,5 +1,6 @@
 import { MotionConfig } from 'motion/react'
 import { LangProvider } from '@/lib/i18n'
+import { IntroProvider } from '@/lib/intro'
 import { SmoothScroll } from '@/lib/smooth-scroll'
 import { Cursor } from '@/components/cursor'
 import { GrainOverlay } from '@/components/grain-overlay'
@@ -16,17 +17,19 @@ function App() {
     <MotionConfig reducedMotion="user">
       <LangProvider>
         <SmoothScroll />
-        <Cursor />
-        <GrainOverlay />
-        <ScrollPulseSpine />
-        <SiteNav />
-        <main>
-          <Hero />
-          <Portfolio />
-          <Process />
-          <Contact />
-        </main>
-        <SiteFooter />
+        <IntroProvider>
+          <Cursor />
+          <GrainOverlay />
+          <ScrollPulseSpine />
+          <SiteNav />
+          <main>
+            <Hero />
+            <Portfolio />
+            <Process />
+            <Contact />
+          </main>
+          <SiteFooter />
+        </IntroProvider>
       </LangProvider>
     </MotionConfig>
   )

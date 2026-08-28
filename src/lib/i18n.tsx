@@ -17,7 +17,6 @@ type Dict = {
     sub: string
     cta: string
     stat1l: string
-    stat2l: string
     /** Label under the $0 promise seal — the seal itself carries the "$0". */
     stat3l: string
   }
@@ -66,12 +65,11 @@ const en: Dict = {
     sub: 'We find dental and aesthetic clinics running on broken or outdated sites and start rebuilding before we ever pitch you — book a quick call and watch the new version live, before you spend a cent.',
     cta: 'Book a Call',
     stat1l: 'Sites rebuilt',
-    stat2l: 'Niches served',
     stat3l: 'Upfront to see it built',
   },
   portfolio: {
     kicker: 'The Work',
-    heading: '50+ rebuilds. Real clinics. Real problems fixed.',
+    heading: '80+ rebuilds. Real clinics. Real problems fixed.',
     sub: 'Every project below started as a cold-outreach rebuild, finished before a single call was booked. Client names and cities are removed to protect confidentiality — the sites, the ratings and the problems are real.',
     viewLabel: 'View',
     dialogWhatWeFixed: 'What we fixed',
@@ -127,12 +125,11 @@ const ar: Dict = {
     sub: 'نلقى العيادات السنية والتجميلية اللي موقعها قديم أو معطل ونبدأ نبنيه قبل لا نسوّق لك رسميًا — احجز مكالمة سريعة وشوف النسخة الجديدة شغالة أمامك، قبل ما تدفع ريال.',
     cta: 'احجز مكالمة',
     stat1l: 'موقع أعدنا بناءه',
-    stat2l: 'مجالات نخدمها',
     stat3l: 'مقدّم مالي لترى الموقع جاهزًا',
   },
   portfolio: {
     kicker: 'أعمالنا',
-    heading: '+50 إعادة بناء. عيادات حقيقية. مشاكل حقيقية انحلّت.',
+    heading: '+80 إعادة بناء. عيادات حقيقية. مشاكل حقيقية انحلّت.',
     sub: 'كل مشروع تحت بدأ كإعادة بناء ضمن تواصل بارد، خلّصناه قبل ما نحجز أي مكالمة. أسماء العملاء ومدنهم محذوفة حفاظًا على خصوصيتهم — أما المواقع والتقييمات والمشاكل فحقيقية 100%.',
     viewLabel: 'عرض',
     dialogWhatWeFixed: 'اللي صلحناه',
