@@ -159,6 +159,15 @@
     }
   html {
     @apply font-sans;
+    /* The grain overlay is fixed at inset:-150px so its per-frame jitter never
+       exposes an edge, but that oversize box still makes the document
+       horizontally scrollable. On a 390px viewport the document measured 449px
+       wide and, because the page is RTL, it came to rest at scrollX -57 — the
+       site loaded already scrolled sideways with the hero copy clipped off the
+       edge. `clip` rather than `hidden`: hidden on the root element turns the
+       root into a scroll container, which breaks position:sticky and fights
+       the smooth-scroll library, whereas clip just refuses the overflow. */
+    overflow-x: clip;
     }
   html[dir="rtl"] body {
     font-family: var(--font-sans-ar);

@@ -76,10 +76,16 @@ function LockGlow() {
   return (
     <motion.span
       aria-hidden
-      className="pointer-events-none absolute left-1/2 top-1/2 -z-10 block h-[160%] w-[130%] -translate-x-1/2 -translate-y-1/2 rounded-[50%] motion-reduce:hidden"
+      // inset-0, NOT an oversized centred box. This used to be h-[160%]
+      // w-[130%] centred with a -translate, which put its edges 15% outside
+      // the parent on each side — 445px wide inside a 390px viewport, adding
+      // ~59px of horizontal overflow to the document on phones. The glow does
+      // not need an oversized element to bleed: sizing the gradient past the
+      // box gives the same soft falloff while the box itself stays put.
+      className="pointer-events-none absolute inset-0 -z-10 block motion-reduce:hidden"
       style={{
         background:
-          'radial-gradient(closest-side, color-mix(in oklch, var(--accent) 22%, transparent), transparent)',
+          'radial-gradient(75% 140% at 50% 50%, color-mix(in oklch, var(--accent) 22%, transparent), transparent 70%)',
       }}
       variants={{
         hidden: { opacity: 0 },

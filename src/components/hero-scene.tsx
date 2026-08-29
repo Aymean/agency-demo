@@ -272,6 +272,28 @@ function useDragOrbit(enabled: boolean) {
       s.velX = 0
       s.velY = 0
       s.engaged = e.pointerType === 'mouse'
+
+      // Suppress the browser's native text-selection drag.
+      //
+      // Without this the object is effectively not draggable at all: the
+      // canvas sits BEHIND the headline, so the place a user naturally grabs
+      // the object is on top of that text, and the browser starts selecting
+      // it. The orbit handler still ran underneath, but the visible result was
+      // a blue text highlight smeared across the hero — it reads as broken,
+      // not as a rotating object. Reported from production and reproduced
+      // here: a drag through the hero's centre selected 12 characters of the
+      // headline.
+      //
+      // The trade is that hero copy can no longer be selected by dragging
+      // across it. That is the right way round: the brief asks for a
+      // draggable centrepiece, and click-dragging to select a marketing
+      // headline is not a thing people need. Clicks are untouched — real UI
+      // already returned above, so the CTA, nav and language toggle still
+      // work normally.
+      if (e.cancelable) e.preventDefault()
+      const sel = window.getSelection()
+      if (sel && !sel.isCollapsed) sel.removeAllRanges()
+      document.body.style.userSelect = 'none'
     }
 
     function onMove(e: PointerEvent) {
@@ -304,14 +326,18 @@ function useDragOrbit(enabled: boolean) {
       s.active = false
       s.pointerId = null
       s.engaged = false
+      document.body.style.userSelect = ''
     }
 
-    window.addEventListener('pointerdown', onDown)
+    // Explicitly non-passive: a passive listener silently ignores
+    // preventDefault(), which is exactly the suppression above depends on.
+    window.addEventListener('pointerdown', onDown, { passive: false })
     window.addEventListener('pointermove', onMove)
     window.addEventListener('pointerup', onUp)
     window.addEventListener('pointercancel', onUp)
     return () => {
       window.removeEventListener('pointerdown', onDown)
+      document.body.style.userSelect = ''
       window.removeEventListener('pointermove', onMove)
       window.removeEventListener('pointerup', onUp)
       window.removeEventListener('pointercancel', onUp)
@@ -421,7 +447,7 @@ function ExamLight({
     if (emitterMat.current) emitterMat.current.opacity = (0.35 + 0.65 * power) * fade
     if (glowMat.current) glowMat.current.opacity = 0.72 * power * fade
     beamMaterial.uniforms.uOpacity.value = 0.2 * power * fade
-    if (spot.current) spot.current.intensity = 17 * power * fade
+    if (spot.current) spot.current.intensity = 9 * power * fade
     if (housingMat.current) housingMat.current.opacity = fade
     if (innerMat.current) {
       innerMat.current.opacity = fade
@@ -447,8 +473,8 @@ function ExamLight({
           <meshStandardMaterial
             ref={housingMat}
             color={HOUSING}
-            metalness={0.25}
-            roughness={0.42}
+            metalness={0.4}
+            roughness={0.3}
             side={THREE.DoubleSide}
             transparent
           />
@@ -562,7 +588,11 @@ function ExamLight({
       </mesh>
       <mesh position={[0, -head * 1.4, -head * 0.05]}>
         <cylinderGeometry args={[head * 0.62, head * 0.7, head * 0.11, compact ? 20 : 48]} />
-        <meshStandardMaterial color={HOUSING_DARK} metalness={0.8} roughness={0.35} />
+        {/* Rougher and less mirror-like than the rest of the armature. The
+            base sits directly behind the stats row, and under the brighter key
+            lighting a polished one clipped to pure white there — 6.78% of that
+            band blown, worse than the hotspot this previously had to fix. */}
+        <meshStandardMaterial color={HOUSING_DARK} metalness={0.55} roughness={0.62} />
       </mesh>
     </group>
   )
@@ -684,9 +714,12 @@ export function HeroScene({
       onCreated={() => onReady?.()}
     >
       <ResponsiveCamera halfW={layout.halfW} halfH={layout.halfH} />
-      <ambientLight intensity={0.55} />
-      <directionalLight position={[4, 6, 5]} intensity={1.5} />
-      <directionalLight position={[-5, -2, -4]} intensity={0.6} color={palette.accent} />
+      <ambientLight intensity={0.85} />
+      <directionalLight position={[4, 6, 5]} intensity={2.9} />
+      <directionalLight position={[-5, -2, -4]} intensity={1.15} color={palette.accent} />
+      {/* Rim from behind, so the dish edge and the arm separate from a
+          near-black background instead of dissolving into it. */}
+      <directionalLight position={[-2, 3, -6]} intensity={1.6} color={palette.foreground} />
 
       {/* Metal needs something to reflect. This environment is built from local
           lightformers and rendered exactly once (frames={1}) — no HDRI fetch,
@@ -695,7 +728,7 @@ export function HeroScene({
         <color attach="background" args={['#0a0d12']} />
         <Lightformer
           form="rect"
-          intensity={2.4}
+          intensity={4.2}
           color="#e9eff7"
           position={[0, 4, 3]}
           rotation={[-Math.PI / 3, 0, 0]}
@@ -703,13 +736,13 @@ export function HeroScene({
         />
         <Lightformer
           form="rect"
-          intensity={1.1}
+          intensity={2.1}
           color="#8fa6bb"
           position={[-5, 0, 2]}
           rotation={[0, Math.PI / 3, 0]}
           scale={[3, 7, 1]}
         />
-        <Lightformer form="circle" intensity={1.6} color={palette.accent} position={[4, -3, 3]} scale={3} />
+        <Lightformer form="circle" intensity={2.6} color={palette.accent} position={[4, -3, 3]} scale={3} />
       </Environment>
 
       <ExamLight

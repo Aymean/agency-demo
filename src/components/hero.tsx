@@ -62,6 +62,15 @@ function scrollToId(id: string) {
   document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
 }
 
+// Raised from 0.32 after the object was reported invisible on the live site.
+// Measured cause: at 0.32 the object's mean contribution across its own
+// bounding box was 4.84 luminance levels out of 255 (composite 22.5 vs
+// background 17.7) — arithmetically present, perceptually not there at all on
+// an ordinary display. The mask was dimming the object hardest across exactly
+// the band the object occupies. Text stays legible because it is near-white
+// (oklch 0.97) on a near-black ground, so its contrast ratio has an enormous
+// margin to spend here.
+//
 // Alpha the scene is dimmed to directly behind text — NOT 0. On mobile the
 // text stack (kicker through stats) fills 70-90% of a short hero's height,
 // so a mask that fully hides the scene there doesn't just protect text, it
@@ -70,7 +79,7 @@ function scrollToId(id: string) {
 // was rendering fine, it was masked to zero alpha under nearly all of the
 // content. Dimming instead of hiding keeps it visibly present everywhere,
 // while still cutting its contrast enough for text on top to read clearly.
-const DIM_ALPHA = 0.32
+const DIM_ALPHA = 0.55
 
 const FALLBACK_MASK =
   `linear-gradient(to bottom, black 0%, black 15%, rgba(0,0,0,${DIM_ALPHA}) 32%, rgba(0,0,0,${DIM_ALPHA}) 68%, black 85%, black 100%)`
