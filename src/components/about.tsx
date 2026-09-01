@@ -1,5 +1,10 @@
 /* About / credibility — section 3.2 of REBUILD_BRIEF.md.
  *
+ * TODO(about-content): intentionally empty, blocked on Aymean's copy.
+ * Greppable on purpose — `rg "TODO(about-content)"` finds this and nothing
+ * else, so the missing section reads as a deliberate hold rather than as
+ * something that got dropped.
+ *
  * SCAFFOLDING ONLY. This deliberately renders no copy.
  *
  * The brief is explicit that Aymean is writing this section's content himself
