@@ -65,6 +65,29 @@ full-width band was silently swallowing every click on it.
 When you do deploy: merge `82bc593` to `master` first, then repoint the existing
 EasyPanel service. Do not deploy `master` before that merge.
 
+## Inputs I was asked to use but could not reach
+
+Two rounds of instructions asked for the rebuild to be audited and rebuilt
+against `leadgen-agency/benchmark/product_knowledge.md` — specifically UI
+Collective's five-stage roadmap and the craft bar described there — with
+`leadgen-agency/marketing-knowledge/` as optional input for the Pricing copy.
+
+**Neither exists in this environment.** `leadgen-agency/` is not present
+anywhere on the filesystem, and a search for `product_knowledge.md` returns
+nothing. It presumably lives on your machine or in a sibling repo that was never
+pushed here — the same thing that happened with `REBUILD_BRIEF.md` at the start
+of this project, which was fixed by committing it.
+
+I did not work around this by inventing a methodology and attributing it to that
+document, or by auditing against a standard I have not read. What that means
+concretely:
+
+- Everything shipped so far was built against `REBUILD_BRIEF.md`, which I do
+  have, and verified by measurement in a browser.
+- Whether it clears `product_knowledge.md`'s bar is **unassessed**, not passed.
+- To unblock: commit the file to this repo, or paste its contents. Then the
+  audit is a real piece of work rather than a guess.
+
 ## How this was verified, and what that does not cover
 
 Every section was checked in a real browser against the production build
