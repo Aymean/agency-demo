@@ -866,3 +866,80 @@ and pushed this run (headline-vs-emitter legibility). Everything else
 audited this pass held up against the brief and showed no console errors,
 no spec regressions, and no new craft-bar shortfalls beyond the two
 already-tracked hero-delay/visual-richness items above.
+
+## 2026-09-02 — tenth run, tackled the visual-richness item with real before/after screenshots
+
+`git pull` — up to date at `2fbec3b` (the ninth run's own log entry),
+~1h44m old at start — clear of the 45-minute collision window. Other
+build session ("Intro sequence, stats, and 3D exam-light") still hasn't
+pushed since `f947cce` (2026-08-28).
+
+**Method:** `npm install`, `npm run build` (clean, same 486KB/1017KB
+chunk split), `npm run lint` (same 6 pre-existing warnings, no new ones).
+`npm install --no-save playwright`, real Chromium (`/opt/pw-browsers`)
+against a production `vite preview` build.
+
+**Picked up the visual-richness item the eighth/ninth runs confirmed but
+declined to touch blind.** Screenshotted the current hero and compared it
+directly against `docs/reference/screenshots/creative-craft/global/
+active-theory-desktop.png` — confirms the eighth run's read: our sparkles
+are in the DOM but essentially invisible at native resolution, and the
+housing/rim are flat matte with no chromatic response, versus the
+reference's dense bokeh field and iridescent ring.
+
+**Fixed, with before/after screenshots at each step:**
+- `Sparkles` in `hero-scene.tsx`: count 26→70 (full) / 12→30 (compact),
+  size 1.2→1.6, opacity 0.28→0.55. Added a second, sparser layer
+  (0.4x count, size 2.2, opacity 0.35, accent-tinted instead of
+  foreground-tinted) for colour variety rather than one flat tint —
+  approximates the reference's mixed cool/warm bokeh without an actual
+  depth-of-field pass, which would be a much bigger lift.
+- Rim band (dish bezel torus) moved from `meshStandardMaterial` to
+  `meshPhysicalMaterial` with `iridescence={1}`, `iridescenceIOR={1.3}`,
+  `iridescenceThicknessRange={[100, 400]}`. Deliberately scoped to just
+  this one small surface, not the main housing — the housing's low
+  metalness is load-bearing per its own comment (`"rendered the whole
+  lamp as a black silhouette"` at high metalness), and the rim is small
+  and simple enough to take the extra chroma without reopening that
+  problem.
+- Did NOT touch dish geometry, housing material, lighting rig, or beam
+  shader — outside the confirmed gap and covered by this scene's own
+  "tuned, don't touch blind" history.
+
+**Verified before shipping:** `tsc --noEmit` clean. Rebuilt — hero-scene
+chunk essentially unchanged (1016.91KB → 1017.10KB, +190 bytes, no new
+program-count red flag from the bundle size alone). Lint unchanged.
+Screenshotted desktop (1440px) and mobile (390px) before and after in AR
+(default) — sparkles are now visibly present around the object in both
+tiers, zero console/page errors in any of the four captures. Confirmed
+the mobile screenshot's odd left-edge sliver artifact is a pre-existing
+quirk of this run's own headless RTL capture setup (identical on the
+unmodified baseline), not a regression — not investigated further since
+it's a test-harness artifact, not a page bug.
+
+**Honest tradeoff, not measured this run:** a second `Sparkles` instance
+and a heavier `meshPhysicalMaterial` (iridescence is a costlier shader
+permutation than `meshStandardMaterial`) both add to the first-frame
+WebGL-program count that the eighth run measured at 14 and tied directly
+to the still-open hero-delay item. Did not re-profile `gl.info.programs`
+after this change — flagging honestly rather than asserting no impact.
+Whoever next picks up hero-delay should re-measure with these changes in
+place rather than assuming the eighth run's 14-program baseline still
+holds.
+
+**Untouched, per standing rules:** `portfolio-data.ts` anonymization,
+pricing figures, About section (still deliberately empty).
+
+**Still open:** hero-delay (~7s to visible object, per the eighth run's
+measurement — not re-measured this run); the program-count question just
+raised above; visual richness is now improved and shipped but not
+re-compared against the Active Theory reference after the fix (would be
+worth one more before/after screenshot from a future run to confirm the
+gap is meaningfully closed, not just narrowed).
+
+**STATUS: NOT YET READY TO DEPLOY.** One real craft-bar fix shipped this
+run, verified with real before/after screenshots rather than asserted
+blind — the first of the two long-open items from the eighth run is now
+addressed (visual richness); the other (hero-delay) is unchanged and still
+needs the visual-judgment call on intro duration that only Aymean or a
+dedicated session can make.
