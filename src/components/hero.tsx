@@ -5,7 +5,7 @@ import { Magnetic } from '@/components/magnetic'
 import { PulseDot } from '@/components/pulse-dot'
 import { RevealGroup, RevealItem, TextReveal } from '@/components/reveal'
 import { useCountUp } from '@/lib/use-count-up'
-import { useShouldRender3D } from '@/lib/use-should-render-3d'
+import { useShouldRender3D, useSceneTier } from '@/lib/use-should-render-3d'
 import { useIntro } from '@/lib/intro'
 import { useLang } from '@/lib/i18n'
 
@@ -70,10 +70,23 @@ function scrollToId(id: string) {
 // was rendering fine, it was masked to zero alpha under nearly all of the
 // content. Dimming instead of hiding keeps it visibly present everywhere,
 // while still cutting its contrast enough for text on top to read clearly.
+//
+// Two strengths, not one: 0.32 was tuned against the `full` tier, where the
+// object sits smaller relative to the headline and the emitter's brightest
+// point lands mostly on the dish's dark exterior, not on the text itself.
+// On the `compact` (mobile) tier the same object reads much larger against a
+// shorter, narrower text column, and the third headline line ends up sitting
+// directly on the lit emitter/glow disc — the single brightest thing in the
+// scene. Measured directly (screenshot, real device viewport): at 0.32 the
+// muted-gray second headline line visibly camouflages against that disc.
+// 0.16 keeps the object legible as "present" behind the text everywhere else
+// while actually restoring contrast where the two collide.
 const DIM_ALPHA = 0.32
+const DIM_ALPHA_COMPACT = 0.16
 
-const FALLBACK_MASK =
-  `linear-gradient(to bottom, black 0%, black 15%, rgba(0,0,0,${DIM_ALPHA}) 32%, rgba(0,0,0,${DIM_ALPHA}) 68%, black 85%, black 100%)`
+function fallbackMask(dimAlpha: number) {
+  return `linear-gradient(to bottom, black 0%, black 15%, rgba(0,0,0,${dimAlpha}) 32%, rgba(0,0,0,${dimAlpha}) 68%, black 85%, black 100%)`
+}
 
 // Dims the WebGL scene down behind the actual text block instead of a fixed,
 // hand-tuned ellipse. A fixed shape only fit the proportions of one layout
@@ -89,8 +102,13 @@ const FALLBACK_MASK =
 // that doesn't belong to anything else in the composition. A band has no such
 // edge to notice — it just reads as the ordinary top/bottom vignette any hero
 // image would have.
-function useContentMask(sectionRef: RefObject<HTMLElement | null>, contentRef: RefObject<HTMLElement | null>, dep: unknown) {
-  const [mask, setMask] = useState(FALLBACK_MASK)
+function useContentMask(
+  sectionRef: RefObject<HTMLElement | null>,
+  contentRef: RefObject<HTMLElement | null>,
+  dep: unknown,
+  dimAlpha: number,
+) {
+  const [mask, setMask] = useState(() => fallbackMask(dimAlpha))
 
   useEffect(() => {
     function measure() {
@@ -107,8 +125,8 @@ function useContentMask(sectionRef: RefObject<HTMLElement | null>, contentRef: R
       const fadeStart = Math.max(0, hideStart - feather)
       const fadeEnd = Math.min(100, hideEnd + feather)
       setMask(
-        `linear-gradient(to bottom, black 0%, black ${fadeStart.toFixed(1)}%, rgba(0,0,0,${DIM_ALPHA}) ${hideStart.toFixed(1)}%, ` +
-          `rgba(0,0,0,${DIM_ALPHA}) ${hideEnd.toFixed(1)}%, black ${fadeEnd.toFixed(1)}%, black 100%)`,
+        `linear-gradient(to bottom, black 0%, black ${fadeStart.toFixed(1)}%, rgba(0,0,0,${dimAlpha}) ${hideStart.toFixed(1)}%, ` +
+          `rgba(0,0,0,${dimAlpha}) ${hideEnd.toFixed(1)}%, black ${fadeEnd.toFixed(1)}%, black 100%)`,
       )
     }
     measure()
@@ -120,7 +138,7 @@ function useContentMask(sectionRef: RefObject<HTMLElement | null>, contentRef: R
       window.removeEventListener('resize', measure)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `dep` (the visible copy) is the real trigger for a language-switch remeasure
-  }, [sectionRef, contentRef, dep])
+  }, [sectionRef, contentRef, dep, dimAlpha])
 
   return mask
 }
@@ -142,9 +160,10 @@ export function Hero() {
   const { contentReady } = useIntro()
   const labels = [t.hero.stat1l]
   const show3D = useShouldRender3D()
+  const tier = useSceneTier()
   const heroRef = useRef<HTMLElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
-  const heroMask = useContentMask(heroRef, contentRef, t.hero.sub)
+  const heroMask = useContentMask(heroRef, contentRef, t.hero.sub, tier === 'compact' ? DIM_ALPHA_COMPACT : DIM_ALPHA)
   const { scrollYProgress } = useScroll({ target: heroRef, offset: ['start start', 'end start'] })
   const introProgress = useMotionValue(0)
   const [resolved, setResolved] = useState(false)
