@@ -169,14 +169,14 @@ const LAYOUTS: Record<SceneTier, Layout> = {
     halfH: 3.05,
     head: 1.72,
     segments: 64,
-    sparkles: { count: 26, scale: [9, 6, 5] },
+    sparkles: { count: 70, scale: [9, 6, 5] },
   },
   compact: {
     halfW: 2.1,
     halfH: 2.65,
     head: 1.45,
     segments: 32,
-    sparkles: { count: 12, scale: [6, 6, 4] },
+    sparkles: { count: 30, scale: [6, 6, 4] },
   },
 }
 
@@ -470,10 +470,23 @@ function ExamLight({
           />
         </mesh>
 
-        {/* Rim band — the machined bezel edge. */}
+        {/* Rim band — the machined bezel edge. Iridescent rather than a flat
+            metal, so the one hard edge in the whole object catches a
+            thin-film colour shift as it turns — the Active Theory reference's
+            chromatic ring is doing the same job on its hero object, and this
+            is the one surface here small and simple enough to take it
+            without fighting the "no black silhouette" reasoning on the main
+            housing above. */}
         <mesh position={[0, -head * 0.62, 0]} rotation={[Math.PI / 2, 0, 0]}>
           <torusGeometry args={[head * 1.02, head * 0.028, 8, seg]} />
-          <meshStandardMaterial color={HOUSING_DARK} metalness={0.9} roughness={0.3} />
+          <meshPhysicalMaterial
+            color={HOUSING_DARK}
+            metalness={0.9}
+            roughness={0.3}
+            iridescence={1}
+            iridescenceIOR={1.3}
+            iridescenceThicknessRange={[100, 400]}
+          />
         </mesh>
 
         {/* The emitter itself. toneMapped={false} so Bloom treats it as a real
@@ -742,13 +755,26 @@ export function HeroScene({
         tier={tier}
       />
 
+      {/* Two layers rather than one: a denser, brighter foreground-coloured
+          field plus a sparser accent-tinted one behind it. A single tint read
+          as a flat dust layer at the reference's density; splitting the
+          colour across two populations is what gives the Active Theory-style
+          field its bokeh variety without any actual depth-of-field pass. */}
       <Sparkles
         count={layout.sparkles.count}
         scale={layout.sparkles.scale}
-        size={1.2}
+        size={1.6}
         speed={0.2}
-        opacity={0.28}
+        opacity={0.55}
         color={palette.foreground}
+      />
+      <Sparkles
+        count={Math.round(layout.sparkles.count * 0.4)}
+        scale={layout.sparkles.scale}
+        size={2.2}
+        speed={0.12}
+        opacity={0.35}
+        color={palette.accent}
       />
 
       <EffectComposer enableNormalPass={false} multisampling={compact ? 0 : 8}>
