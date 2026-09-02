@@ -528,3 +528,93 @@ move, not another static comparison).
 run (chunk prefetch), but it turned out not to be the dominant cost —
 that's the long task above, still open, with a concrete next step but no
 fix attempted yet.
+
+---
+
+## 2026-09-02 — seventh run, root-caused and partially fixed the long task
+
+`git pull` — up to date at `ab2ffeb` (the sixth run's own QA-log entry
+above), ~1h51m old at start — clear of the collision window, audited and
+pushed.
+
+**Method:** `npm install`, `npm run build` (clean), `npm run lint` (same 6
+pre-existing warnings, no new ones). This run picked up the sixth run's
+own "concrete next step" — profile whether the ~1.7s long task is really
+shader compilation — using `Profiler.start`/`Profiler.stop` over CDP
+(Playwright, pre-installed Chromium) to get an actual CPU profile of a
+fresh production load, not just `PerformanceObserver` longtask entries.
+
+**Root cause, confirmed at the function level:** aggregating self-time
+by function across the profile, the single hottest JS function by a wide
+margin (~11% of all samples in one run) was three.js's `checkLinkStatus`
+(minified to `function C` in the built chunk, traced back to
+`WebGLProgram.js` via the built file's source). That function is gated on
+`renderer.debug.checkShaderErrors`, which **defaults to `true` even in
+production builds** — a known three.js footgun. When true, every
+`linkProgram()` call is immediately followed by
+`gl.getProgramParameter(program, gl.LINK_STATUS)`, which is a synchronous
+GPU sync point: it blocks the JS thread until the driver has actually
+finished compiling+linking that program, rather than letting compilation
+happen off-thread. This scene compiles 10+ distinct programs on first
+render (the exam light's several `meshStandardMaterial`s, the beam's
+custom `ShaderMaterial`, `Environment`'s lightformers, `Bloom`'s
+`EffectComposer` passes), so the cost lands as one contiguous stall right
+when the object is supposed to become visible.
+
+**Fixed and pushed (`1f69861`):** `gl.debug.checkShaderErrors = false` in
+`HeroScene`'s `Canvas` `onCreated`, gated on `import.meta.env.PROD` so
+dev keeps real-time shader error reporting (only production skips the
+check — by then errors should already be caught). Zero visual/behavioral
+change if shaders compile successfully, which they do (confirmed via
+screenshot after the fix — object renders identically).
+
+**Measured, not assumed:** re-profiled after the fix — `checkLinkStatus`
+samples dropped from 7823 (~11%) to 32 (~0.1%) in matched profiler runs,
+essentially eliminated. For an end-to-end number without profiler
+overhead skewing things, ran 3 fresh-incognito-context loads on the
+unfixed build and 6 on the fixed build (`PerformanceObserver` longtask
+entries only, `vite preview` production build, local loopback): baseline
+averaged **~2.97s** of post-intro main-thread blocking, fixed averaged
+**~1.46s** — roughly a 50% cut. High run-to-run variance in both
+(140ms-3.3s) reflects this sandboxed environment's noisy/software-rendered
+GPU, consistent with the caveat in run six's entry — but the fixed build
+was lower on every single comparable pairing, and the function-level
+attribution removes any doubt about mechanism.
+
+**This is not a full fix, and I'm saying so plainly:** re-profiling the
+fixed build, the new hottest function is three.js's `WebGLUniforms`
+constructor — it calls `gl.getProgramParameter(program,
+gl.ACTIVE_UNIFORMS)` and `gl.getUniformLocation()` for every uniform
+right after linking, which is core rendering setup (building the
+material's uniform map) and can't be disabled by a flag. That call can
+also stall on an unfinished link, so some real GPU-driver-bound blocking
+remains and is inherent to compiling this many programs synchronously on
+first frame. Run six's other suggestion — trimming first-frame shader
+count itself (fewer distinct materials, simpler `Environment` resolution,
+or gating `Bloom`/`EffectComposer` behind a second-frame mount) — is
+still open and would address this remaining cost; I did not attempt it
+this run, both to keep this fix isolated/easy to verify and because it
+touches the scene's actual visual composition, which deserves its own
+pass rather than being bundled with a one-line production flag flip.
+
+**Spec re-check, no regressions:** section order, pricing copy, About
+section scaffold, and `portfolio-data.ts` anonymization all re-checked
+against `App.tsx`/`i18n.tsx`/`about.tsx`/`portfolio-data.ts` directly —
+unchanged from prior entries.
+
+**Untouched, per standing rules:** `portfolio-data.ts` anonymization,
+pricing figures, About section.
+
+**Still open:** trimming first-frame shader/material count to close the
+remaining ~1.5s of GPU-driver-bound blocking (concrete direction above);
+the resolved object's visual richness vs. the Active Theory reference
+(flagged fifth run, still unconfirmed — needs a run with time to watch it
+move).
+
+**STATUS: NOT YET READY TO DEPLOY.** Real fix pushed and measured this
+run, root-causing the long task the previous run only flagged — cuts
+post-intro main-thread blocking roughly in half. The object still isn't
+instantly visible; the remaining cost is now well-understood (inherent
+WebGL program setup for 10+ materials, not a fixable JS-side stall) and
+has a concrete next step (reduce material/shader count) for whichever run
+picks it up next.
