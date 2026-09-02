@@ -148,11 +148,35 @@ rather than replacing it with something else.
 - Palette/type: keep the existing token system in `index.css` (graphite-ink dark base,
   teal `--accent`, rationed champagne `--accent-premium`, Fraunces display serif on `dir=ltr`
   headlines, IBM Plex Sans / IBM Plex Sans Arabic body) — this was validated against real
-  client-approved reference sites (see `../benchmark/design_learnings_multispecialty-clinic.md`)
+  client-approved reference sites (see `docs/reference/design_learnings_multispecialty-clinic.md`)
   and should not be redesigned from scratch.
 - Bilingual EN/AR + RTL must work identically across every new section — follow the
   existing `[dir="ltr"]` / `[dir="rtl"]` scoping pattern already used throughout
   `index.css` and `hero.tsx`, don't let new sections skip Arabic parity.
+
+---
+
+## 8. Craft standard — read this before auditing or building anything
+
+**`docs/reference/product_knowledge.md`** is the working craft/method reference for this
+build, not background reading — it holds the distilled Claude Code website-building
+method (UI Collective's 5-stage roadmap: Audit → Direction → Guardrails → Design & QA →
+Pitch; Tommy Chryst's 3Ds; Web Prodigies' Architectural Guardrail system), the Creative
+Craft section (motion/animation judgment, conversion psychology, trust-signal patterns),
+and Conversion/CRO principles. Run this rebuild through it, don't just skim it.
+
+**`docs/reference/swipe_file.md`** has real screenshots (desktop + mobile) of verified
+award-winning creative-dev sites (Obys/Active Theory tier) referenced throughout
+product_knowledge.md — use these as the actual visual bar, not a verbal description of one.
+
+**`docs/reference/design_learnings_multispecialty-clinic.md`** is the per-niche visual
+study the current token system (§6) was validated against.
+
+These three files previously lived outside this git repo (`leadgen-agency/benchmark/` on
+Aymean's local machine, never pushed anywhere) and were **not actually reachable by any
+cloud session** working only from this repo's checkout — copied in here 2026-09-02 so
+they're actually available. If you're a cloud/routine session reading this and these paths
+don't exist, `git pull origin master` first; they were added after some earlier commits.
 
 ---
 
