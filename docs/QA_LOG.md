@@ -774,3 +774,95 @@ and upgrades the visual-richness concern from "flagged, unconfirmed" to
 a visual-judgment call on shortening the intro, or acceptance that ~7s is
 the realistic floor given the confirmed pacing spec — that's a call for
 Aymean, not something to keep re-measuring.
+
+---
+
+## 2026-09-02 — ninth run, real mobile bug fixed, widened the lens off hero-delay
+
+`git pull` — up to date at `609df41`, ~1h50m old at start (clear of the
+45-minute collision window; the other build session still hasn't pushed
+since `f947cce`, 2026-08-28). The last four runs went deep and narrow on
+the hero-delay item specifically at Aymean's direction; this run
+deliberately widened back out to a full section-by-section pass, since
+process/pricing/work/contact/footer hadn't had a real screenshot audit
+since the very first run of this loop.
+
+**Method:** `npm install` (reverted the incidental `package-lock.json`
+`libc`-field diff before touching anything — same false alarm every prior
+run hits), `npm run build` (clean, same 486KB/1017KB chunk split),
+`npm run lint` (same 6 pre-existing warnings, no new ones). Installed
+Playwright (`--no-save`, reverted the lockfile diff again after), served a
+real production `vite preview` build, and drove real Chromium across
+desktop (1440px) and mobile (`devices['iPhone 13']`, real touch/DPR
+emulation) in both EN and AR, screenshotting Hero, Process, Work, Pricing
+and Contact/footer in each of the four combinations. Zero console errors
+in all four.
+
+**Found and fixed:** on the mobile (`compact`) scene tier, the hero's
+second headline line ("Then we ask if you want it.", muted-gray) renders
+almost illegibly on top of the exam light's lit emitter/glow disc — the
+single brightest element in the whole scene. Confirmed with a pixel crop,
+not just a glance: at native resolution the gray glyphs visibly camouflage
+against the bright disc behind them. Root cause: `hero.tsx` already has a
+real, deliberate content-aware dimming mask for exactly this
+problem (`useContentMask`, measures the actual text content box and dims
+the WebGL scene behind it, `DIM_ALPHA = 0.32`) — but that value was
+evidently tuned/verified against the `full` (desktop) tier only, where the
+object sits smaller relative to the headline and the emitter lands mostly
+on the dish's dark exterior rather than on the text. On the `compact` tier
+the same object reads much larger against a shorter, narrower text column,
+so the headline's third line ends up directly over the emitter, and 0.32
+isn't enough contrast cut there. Fixed by adding a second, stronger
+`DIM_ALPHA_COMPACT = 0.16`, selected via the already-exported
+`useSceneTier()` and threaded through the existing mask hook — no change
+to `hero-scene.tsx`, the object's materials, or anything covered by the
+standing "don't touch the tuned scene blind" caution from prior entries,
+since this is purely the pre-existing text-legibility layer doing more of
+what it already does. Verified with fresh screenshots after rebuilding:
+mobile headline is now clearly legible in both EN and AR/RTL (RTL parity
+holds — checked separately), and desktop is pixel-identical to before
+(still `DIM_ALPHA = 0.32`, unchanged). Build and lint re-verified clean
+after the change. Pushed as `25d361a`.
+
+**Checked and held up, no changes needed:**
+- Section order, pricing copy/numbers (`$3,000 - $10,000` / `50%` / `50%`
+  / `<24h`), portfolio anonymization (7 entries, no real names, "Gulf ..."
+  labels are intentionally generic, not a KSA-narrowing regression) — all
+  match the confirmed spec.
+- Portfolio hover-reveal (`ScreenWipe` in `portfolio.tsx`) — re-verified
+  working via a real hover test with a fresh screenshot, real image swaps
+  in correctly under the cursor's "View" label.
+- Footer legal line reads "© 2026 ZYL Commerce LLC. All rights reserved."
+  — correct for the current date, not stale.
+- Contact email/phone unchanged, matches Aymean's prior confirmation.
+- Investigated one apparent visual bug that turned out not to be one: a
+  bright vertical edge briefly visible on portfolio cards in an early
+  screenshot. Re-tested with a longer wait before capturing — it fades
+  within a few seconds and doesn't recur. This is the section-transition
+  "lock glow" motif from REBUILD_BRIEF §2 actually firing on scroll-into-
+  view (the reveal system's directional-entry glow, now confirmed working
+  on Work cards, not just Process/Pricing) — flagging the false trail so a
+  future run doesn't waste time on it, and noting it as a positive craft
+  confirmation rather than a bug.
+
+**Not touched this run:** the hero-delay (~7s to visible object) and
+visual-richness-vs-Active-Theory items from the last four entries are
+still exactly where the eighth run left them — both real, both still
+open, neither re-measured or re-attempted here. This run's time went to
+the broader section pass instead; that tradeoff was deliberate (four runs
+in a row on the same item was starting to leave everything else
+unaudited), not a judgment that hero-delay stopped mattering.
+
+**Untouched, per standing rules:** `portfolio-data.ts` anonymization,
+pricing figures, About section (still deliberately empty).
+
+**Still open:** hero-delay (~7s), visual richness vs. Active Theory
+reference (particle density, iridescent material) — both unchanged from
+the eighth run's diagnosis, still need either a visual-judgment pass or a
+dedicated before/after-screenshot session, not another blind attempt.
+
+**STATUS: NOT YET READY TO DEPLOY.** One real, verified mobile bug fixed
+and pushed this run (headline-vs-emitter legibility). Everything else
+audited this pass held up against the brief and showed no console errors,
+no spec regressions, and no new craft-bar shortfalls beyond the two
+already-tracked hero-delay/visual-richness items above.
