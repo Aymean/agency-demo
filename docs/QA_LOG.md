@@ -424,3 +424,107 @@ the now-real screenshots (spot-checked one this run, matches).
 and still the top priority — with a concrete, testable direction for the
 fix — plus one new unconfirmed craft-bar flag on the resolved object's
 visual richness versus the Active Theory reference.
+
+---
+
+## 2026-09-02 — sixth run, real fix pushed + a bigger finding underneath it
+
+`git pull` — up to date at `bd9b425` (the fifth run's own audit-only
+entry), and it was ~2 hours old at the start of this run — well clear of
+the 45-minute collision window, so this run was free to push directly.
+
+**Fix pushed (`29bb38c`):** implemented the fifth run's own recommended
+direction — an early, unconditional `import('@/components/hero-scene')`
+fired the instant `Hero` mounts (during the intro overlay, not gated on
+`contentReady`), separate from the `lazy()` factory that actually renders
+it. Dynamic imports are deduped by resolved specifier, so this doesn't
+double-fetch or double-evaluate the module; it just moves *when* the
+fetch starts, not *when* the component mounts. `SCENE_MOUNT_DELAY` is
+untouched.
+
+**Measured, not assumed — full method:** `npm run build` (clean) +
+`vite preview`, driven with Playwright (Chromium is preinstalled in this
+environment at `/opt/pw-browsers/chromium`) via a CDP session with
+`Network.emulateNetworkConditions` set to Chrome DevTools' "Fast 4G"
+profile (170ms RTT, 9Mbps). Fresh incognito context per run, three runs
+each, comparing this commit against the immediately-prior commit
+(`bd9b425`) checked out via `git stash`:
+
+- Baseline: `hero-scene` chunk requested ~7.14s in, fetch completes
+  ~7.58s, `<canvas>` present in the hero section ~7.65-7.70s.
+- Fixed: chunk requested ~0.7s in (during the intro), fetch completes
+  ~1.8s — fully inside the ~5s intro window — `<canvas>` present
+  ~7.44-7.46s.
+
+**The fix is real and worth keeping, but it is not the whole bug.** The
+gap it closes on this connection profile is only ~200ms, because
+`<canvas>`-present time is barely gated by fetch time at all — on a fast
+loopback/CDN fetch, the chunk was never the bottleneck to begin with. The
+actual dominant cost, found by adding a `PerformanceObserver` for
+`'longtask'` entries across the full page-load timeline: **a single
+~1.7s main-thread-blocking long task starting at ~7.6s, present
+identically in both the baseline and the fixed build** (1689ms vs
+1739ms, starting within 15ms of each other). This fix doesn't touch it
+either way — no regression, but no improvement on the real bottleneck.
+
+Reading `hero-scene.tsx` to explain that task rather than just reporting
+the number: `<Environment resolution={...} frames={1}>` does a real
+cube-render pass, and the scene has ~10+ distinct materials (multiple
+`meshStandardMaterial`s, a custom `ShaderMaterial` for the beam, `Bloom`
+via `EffectComposer`/`postprocessing`) that all need their shader
+programs compiled on first render. `onReady` fires on `Canvas`'s
+`onCreated`, but the actual pixels — and therefore the object being
+*visible*, which is what Aymean flagged — depend on that first frame
+actually completing, and shader compilation is exactly the kind of
+synchronous, unavoidably-main-thread work that would produce a task like
+this. That is a plausible, evidence-backed explanation, not a confirmed
+root cause — I did not instrument WebGL calls directly to prove it.
+
+**One important caveat on the number itself:** this was measured in a
+headless/sandboxed Chromium with no confirmed real GPU backing (likely
+SwiftShader software rendering). Shader compilation on a software
+rasterizer can be meaningfully slower than on real client hardware, so
+1.7s may be an inflated worst case rather than what a real visitor's
+phone or laptop actually experiences. The next run (or a run with access
+to a machine with real GPU acceleration) should re-measure this same
+`longtask` profile before treating 1.7s as the real number to design
+against — but even discounted, a single uninterrupted long task at the
+exact moment the object is supposed to become visible is a legitimate
+concern regardless of its exact magnitude.
+
+**Concrete next step for whoever picks this up:** profile whether the
+long task is actually shader compilation (e.g. wrap the `Canvas`'s first
+render in `performance.mark`/`measure` calls around specific stages, or
+use Chrome's Performance panel/tracing instead of just `PerformanceObserver`
+if a session with a real browser UI is available) and, if confirmed,
+look at trimming first-frame shader count (fewer distinct materials,
+simpler `Environment` resolution, or gating `Bloom`/`EffectComposer` in
+behind a `requestIdleCallback`/second-frame mount so the *headline-visible*
+frame doesn't have to wait on it) rather than reflexively shortening
+`SCENE_MOUNT_DELAY` — the fifth run's contention bug (chunk parse
+stealing the headline's timer) and this long task are two different
+costs that happen to land in the same few hundred milliseconds, and only
+one of them is what this fix addressed.
+
+**Spec re-check, no regressions:** section order in `App.tsx` (`Hero →
+About → Process → Portfolio → Pricing → Contact`) still matches the
+brief; `i18n.tsx` still reads `$3,000 - $10,000` / `50% to start` / `50%
+before delivery` / "Live in under 24h" in both locales; `about.tsx` is
+still the deliberate content-empty scaffold; `portfolio-data.ts` has no
+real client names. `npm run lint` — same 6 pre-existing
+`only-export-components` warnings, no new ones.
+
+**Untouched, per standing rules:** `portfolio-data.ts` anonymization,
+pricing figures, About section.
+
+**Still open:** the ~1.7s shader/WebGL-compile long task above (new,
+top priority — the actual reason the object isn't visible sooner, more
+so than the fetch timing the last two runs focused on); the resolved
+object's visual richness vs. the Active Theory reference (flagged fifth
+run, still unconfirmed either way — needs a run with time to watch it
+move, not another static comparison).
+
+**STATUS: NOT YET READY TO DEPLOY.** Real fix pushed and measured this
+run (chunk prefetch), but it turned out not to be the dominant cost —
+that's the long task above, still open, with a concrete next step but no
+fix attempted yet.
