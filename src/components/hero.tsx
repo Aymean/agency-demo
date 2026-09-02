@@ -152,6 +152,25 @@ export function Hero() {
   const [headlinePlay, setHeadlinePlay] = useState(false)
   const [mountScene, setMountScene] = useState(false)
 
+  // Warms the ~960KB hero-scene chunk's fetch+parse as early as physically
+  // possible — the instant this component mounts, i.e. during the intro
+  // overlay itself, well before contentReady flips. This used to not start
+  // until contentReady + SCENE_MOUNT_DELAY (~6.4s in), so the network fetch
+  // (measured at 6860-7014ms in QA) hadn't even begun by the time the object
+  // was supposed to be visible. Dynamic imports are deduped by resolved
+  // module URL: this doesn't trigger a second fetch or a second module
+  // evaluation when the `lazy()` factory below imports the same specifier
+  // again at mountScene time — it just reuses the already-settled promise.
+  // Firing the parse/execute work during the intro (rather than during the
+  // headline's reveal window) is exactly what keeps this from reintroducing
+  // the main-thread contention SCENE_MOUNT_DELAY exists to avoid — see that
+  // comment below; this prefetch does not change when the component actually
+  // mounts/renders, only when its bytes are fetched and evaluated.
+  useEffect(() => {
+    if (!show3D) return
+    void import('@/components/hero-scene')
+  }, [show3D])
+
   // The instrument's own glitch -> calibrated beat. Starts when the scene is
   // actually on screen (not on mount, so it can't play out over a blank
   // canvas) but no longer gates anything else — the headline has already
