@@ -15,17 +15,34 @@ export function Cursor() {
     if (!enabled) return
     document.documentElement.classList.add('cursor-ready')
 
-    const onMove = (e: PointerEvent) => {
-      x.set(e.clientX)
-      y.set(e.clientY)
-      const target = (e.target as HTMLElement)?.closest?.('[data-cursor]') as HTMLElement | null
+    // Shared by pointermove and scroll: elementFromPoint reads whatever is
+    // actually under a viewport coordinate right now, rather than trusting a
+    // stale event target.
+    function updateHoverAt(clientX: number, clientY: number) {
+      const el = document.elementFromPoint(clientX, clientY)
+      const target = (el as HTMLElement | null)?.closest?.('[data-cursor]') as HTMLElement | null
       setHover(!!target)
       setLabel(target?.dataset.cursor === 'view' ? 'View' : '')
     }
+
+    const onMove = (e: PointerEvent) => {
+      x.set(e.clientX)
+      y.set(e.clientY)
+      updateHoverAt(e.clientX, e.clientY)
+    }
     window.addEventListener('pointermove', onMove)
+
+    // Lenis drives scroll by animating scrollTop under a stationary pointer —
+    // no pointermove fires along the way. Without this, hover/label state
+    // freezes at whatever was under the cursor before the scroll started: the
+    // "View" ring stays lit over a completely different section once the page
+    // has scrolled a portfolio card's dialog trigger out from under it.
+    const onScroll = () => updateHoverAt(x.get(), y.get())
+    window.addEventListener('scroll', onScroll, { passive: true })
 
     return () => {
       window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('scroll', onScroll)
       document.documentElement.classList.remove('cursor-ready')
     }
   }, [enabled, x, y])

@@ -96,8 +96,8 @@ export function Portfolio() {
                     <div>
                       <div className="font-medium">{item.label[lang]}</div>
                       {/* The specific thing that was broken, per client. This
-                          line is why the grid reads as fifty real rescues and
-                          not as a set of layout samples. */}
+                          line is why the grid reads as real rescues and not
+                          as a set of layout samples. */}
                       <div className="mt-1 text-sm text-pretty text-muted-foreground">
                         {item.hook[lang]}
                       </div>
