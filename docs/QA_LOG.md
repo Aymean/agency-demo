@@ -111,3 +111,23 @@ copy (brief item, not a bug). Contact email domain needs confirming. Swipe
 file images are missing so the visual craft-bar comparison is still
 unverified against the actual references. Everything else audited this pass
 held up.
+
+---
+
+## 2026-09-02 — second run, no change
+
+`git pull` — already up to date. HEAD (`89493ce`) is the exact commit that
+wrote the entry above; the other session ("Intro sequence, stats, and 3D
+exam-light") hasn't pushed anything new since. Nothing new to audit against
+the brief, so didn't re-walk every section — instead re-verified the build
+is still healthy: `npm install`, `npm run build` (tsc + vite — clean), and
+`npm run lint` (oxlint — same 6 pre-existing `only-export-components`
+warnings as last run, no new ones). No regressions.
+
+All open items from the previous entry are unchanged and still open: About
+section copy (waiting on Aymean, not a gap), contact email domain
+(`contact@zaylogear.com` vs. "Zaylo Agency" brand — needs Aymean to confirm),
+and `docs/reference/swipe_file.md`'s missing screenshot files (verbal
+description only, no actual images to compare against).
+
+**STATUS: unchanged — NOT YET READY TO DEPLOY**, same reasons as above.
