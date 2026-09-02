@@ -618,3 +618,159 @@ instantly visible; the remaining cost is now well-understood (inherent
 WebGL program setup for 10+ materials, not a fixable JS-side stall) and
 has a concrete next step (reduce material/shader count) for whichever run
 picks it up next.
+
+---
+
+## 2026-09-02 — eighth run, closed off two dead-end levers, no code pushed
+
+`git pull` — up to date at `0d36781` (the seventh run's own log entry),
+~1h46m old at start — clear of the 45-minute collision window. The other
+build session ("Intro sequence, stats, and 3D exam-light") still hasn't
+pushed since `f947cce` (2026-08-28) — everything on `master` since then is
+this QA loop's own work.
+
+**Method:** `npm install`, `npm run build` (tsc + vite — clean, same
+486KB/1017KB chunk split), `npm run lint` (oxlint — same 6 pre-existing
+`only-export-components` warnings, no new ones). Re-checked spec
+conformance directly against source: section order in `App.tsx` (`Hero →
+About → Process → Portfolio → Pricing → Contact`, matches brief),
+`i18n.tsx` pricing copy in both locales (`$3,000 - $10,000` / `50% to
+start` / `50% before delivery` / `Live in under 24h`), `portfolio-data.ts`
+labels (all 7 entries anonymized, no real client names). No regressions.
+`npm install --no-save playwright` (reverted the incidental
+`package-lock.json` `libc`-field diff before touching anything, same false
+alarm every prior run has hit), drove a production `vite preview` build
+with real Chromium — zero console errors on a fresh load in both AR
+(default) and EN.
+
+**Went deep on the still-open hero-delay item instead of re-treading old
+ground.** The last two runs each shipped a real, measured fix (chunk
+prefetch, then the `checkShaderErrors` production flag) but both aimed at
+secondary costs. This run measured the actual current end-to-end number
+and worked out exactly how much runway is left on each remaining lever,
+rather than reaching for another fix blind.
+
+**Current real number, freshly measured:** fresh-incognito-context loads
+of the production build, screenshotting at fixed intervals — the exam
+light is still not visible at 7.0s (identical to 6.5s, plain background)
+and is clearly visible by 7.5s. So after both prior fixes, the object
+still isn't on screen until roughly the same ~7-7.5s window the original
+complaint was about. That's not a regression — the two prior fixes were
+real and independently verified — it's that neither one touched the
+dominant cost.
+
+**Lever 1 — `SCENE_MOUNT_DELAY`: confirmed there is no free room left.**
+Read `hero.tsx` and `intro-sequence.tsx` together and did the arithmetic
+the code's own comments set up but don't spell out end-to-end:
+`contentReady` fires at `RESOLVE_AT + FADE_OUT` = 5.0s + 0.55s = **5.55s**
+(assemble 2.25s + glow 0.65s + hold 1.15s + burst-and-fade overlap
+accounts for the rest). The headline's own reveal (`HEADLINE_DELAY` 0.3s,
+then `h1a`'s 0.9s and `h1b`'s 0.13s-delayed 0.9s) finishes at
+`contentReady + 1.33s` = **6.88s**. `SCENE_MOUNT_DELAY` (1.4s) mounts the
+scene at `contentReady + 1.4s` = **6.95s** — only ~70ms after the headline
+reveal actually finishes. That 70ms margin is exactly what the file's own
+comment describes ("deferred past the headline's own reveal... plus a
+little slack") — it is already tuned to the minimum needed to avoid
+reintroducing the exact main-thread-contention bug `SCENE_MOUNT_DELAY` was
+added to fix. There is no room to shave here without also shortening the
+headline's reveal animation. Closing this off as a lever.
+
+**Lever 2 — first-frame shader/material count: measured directly, real
+but modest.** Temporarily instrumented `HeroScene`'s `onCreated` to log
+`gl.info.programs.length` after first render (reverted before finishing —
+zero diff left in the working tree), profiled against the running
+production build: **14 distinct WebGL programs compiled on first frame.**
+Breaking down the cache keys: ~5 are `MeshStandardMaterial` variants (the
+10 actual `meshStandardMaterial` instances in the scene — dish, inner
+cone, rim, yoke, two arm segments, two joints, post, base — already
+dedupe down to 5 by three.js's own program cache, contrary to what "10+
+materials" in prior entries implied), ~3 are `MeshBasicMaterial` variants
+(emitter, glow), ~3-4 are fixed `Environment`/PMREM-generation overhead
+(the `GGX_SAMPLES`-tagged keys — this cost exists any time `<Environment>`
+is used at all, independent of scene complexity), 2 are `Bloom`'s
+`EffectComposer` passes, and the remainder is the beam's custom
+`ShaderMaterial`. Realistic ceiling on consolidating the 5 standard-material
+variants further: maybe 2-3 fewer programs, since the material differences
+(dish is `DoubleSide` + transparent, most of the rest are opaque `FrontSide`)
+are load-bearing for how the dish reads, per `hero-scene.tsx`'s own
+comments on exactly this. That's a real, verified number — not a guess —
+but it's a fraction of the ~1.46s average compile cost the seventh run
+measured, not something that would look "dramatically sooner" on its own.
+Also risks changing how the dish/interior actually render if forced into
+uniform materials, in a scene that has been visibly, carefully tuned
+(every material's `side`/`metalness`/`transparent` choice has a comment
+explaining what it's for). Not attempting this blind in a QA pass; still a
+legitimate next step for a session that can screenshot before/after and
+confirm nothing visually shifted.
+
+**The honest conclusion: neither remaining lever gets to "dramatically
+sooner" on its own.** The only one that plausibly could is the one this
+run did NOT touch: the intro sequence's own duration (assemble 2.25s +
+glow 0.65s + hold 1.15s + burst ≈ 5.5s total before `contentReady`).
+Aymean's own prior message listed "shortening the intro sequence itself"
+as an option to evaluate, so this isn't off the table — but every constant
+in `intro-sequence.tsx` carries a comment explaining a specific, measured
+margin (e.g. the burst-to-overlay-fade gap, tuned against a software
+renderer dropping frames), and the brief's own confirmed pacing calls this
+"cinematic, not snappy," explicitly modeled on Obys's own unhurried intro
+timing. Cutting it is a real creative trade-off between "loads faster" and
+"still reads as deliberate, not rushed" that needs to actually be watched,
+not computed — I can screenshot static frames but can't judge whether a
+shortened version still lands as intentional pacing versus feeling
+truncated. Recommending a future run (or Aymean directly) look at 2-3
+shortened variants side by side before landing one, rather than a QA loop
+guessing at new numbers blind.
+
+**No code pushed this run, by choice, not by the 45-minute rule** (this
+run was clear to push). Investigated the top-priority item thoroughly and
+found the two most obvious remaining levers each have a hard ceiling that
+falls short of what "dramatically sooner" would need — better to say that
+plainly with real numbers than to ship a change that shaves a few hundred
+ms and calls the top-priority item further "improved" when it isn't
+meaningfully fixed.
+
+**New finding, now CONFIRMED (previously only flagged as unconfirmed):**
+compared a fresh screenshot of the fully-resolved hero object directly
+against `docs/reference/screenshots/creative-craft/global/active-theory-
+desktop.png` side by side. The gap the fifth run flagged as "unconfirmed,
+needs a run with time to watch it move" holds up even on a static
+comparison: Active Theory's reference object sits in a dense, varied
+bokeh-style particle field with real depth (near/far blur), an iridescent,
+chromatic-shifting ring material, and a soft volumetric beam with visible
+atmosphere. Our exam light, fully resolved, shows almost no visible
+sparkles (the `Sparkles` component is present in code with `opacity={0.28}`
+but reads as nearly invisible in the actual screenshot), a flat matte
+housing with no iridescence, and a single flat teal glow with no
+atmospheric falloff. This is a legitimate, now-confirmed craft-bar gap
+versus the Obys/Active Theory reference — the object itself (form,
+materials, lighting rig) already went through real iterations per this
+log's history, but the *density and richness* of the surrounding
+atmosphere (particles, chromatic material response) is the piece that
+still reads as plainer than the reference bar. Worth a dedicated pass:
+likely levers are increasing `Sparkles` count/opacity/size (currently 26
+at 0.28 opacity, full tier), and giving the housing or rim an
+iridescent/multi-tone material response instead of a single flat color.
+Not attempted this run — same reasoning as the shader-count item: touches
+visual composition of a carefully-tuned object, deserves screenshots
+before/after rather than a blind edit.
+
+**Untouched, per standing rules:** `portfolio-data.ts` anonymization,
+pricing figures, About section (still deliberately empty).
+
+**Still open:** the hero-delay item is now much better understood but not
+resolved — the only lever with real headroom (intro duration) needs a
+visual-judgment pass, not a numeric guess; material/shader consolidation
+is real but modest (verified: 14 programs, ~2-3 plausibly removable);
+visual richness vs. the Active Theory reference is now confirmed (not just
+flagged) and needs a dedicated pass on particle density and material
+response.
+
+**STATUS: NOT YET READY TO DEPLOY.** No code changes this run — the
+investigation itself is the deliverable: it closes off two possible
+"easy" fixes for the top-priority hero-delay item with real measurements
+(so the next run doesn't re-spend time re-discovering the same ceilings),
+and upgrades the visual-richness concern from "flagged, unconfirmed" to
+"confirmed, with concrete levers." The hero-delay item still needs either
+a visual-judgment call on shortening the intro, or acceptance that ~7s is
+the realistic floor given the confirmed pacing spec — that's a call for
+Aymean, not something to keep re-measuring.
