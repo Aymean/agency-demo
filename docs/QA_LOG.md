@@ -1079,3 +1079,93 @@ rather than either fixing them blind or leaving them as unresolved
 question marks for the next run. Hero-delay remains the one substantive
 open item, and it still needs Aymean's creative call, not more
 measurement.
+
+---
+
+## 2026-09-02 — twelfth run (first hourly-cadence run), clean pass, one more false trail closed
+
+Cadence changed to hourly per Aymean's request as of this run. `git pull` —
+up to date at `e0c0e07` (the eleventh run's own log entry). Note on repo
+state: found `HEAD` detached at that same commit rather than on `master`
+at the start of this run (harmless — nothing had been committed there —
+but `git checkout master` was needed before this run could push anything).
+`e0c0e07` was ~46 minutes old at that point — clear of the 20-minute
+hourly-cadence collision buffer, so audited and clear to push if anything
+turned up.
+
+**Method:** `npm install` (no lockfile diff — the recurring `libc`-field
+false alarm every prior run has hit didn't reproduce this time), `npm run
+build` (clean, identical 486.65KB/1017.10KB chunk split to every run since
+the tenth — no drift), `npm run lint` (same 6 pre-existing
+`only-export-components` warnings, no new ones). Spec spot-check straight
+from source: `App.tsx` section order (`Hero → About → Process → Portfolio
+→ Pricing → Contact`), `i18n.tsx` pricing copy in both locales
+(`$3,000 - $10,000` / `50%` / `50%` / `<24h`), `portfolio-data.ts` (0
+`name:` fields, all 7 labels still the anonymized "Gulf ..." pattern) —
+all match brief, no regressions.
+
+**Live pass:** `npm install --no-save playwright`, served a production
+`vite preview` build, drove real Chromium (`/opt/pw-browsers/chromium`)
+across desktop AR/EN (1440px), a mid-session language toggle, and mobile
+AR (`devices['iPhone 13']`). Zero console/page errors in every capture.
+Screenshotted hero (both languages), pricing/contact/footer, and mobile
+hero.
+
+**Checked and held up, no changes needed:**
+- Footer contact block unchanged (`contact@zaylogear.com`, matches
+  Aymean's standing confirmation), pricing numbers correct in AR screenshot
+  (`$3,000 - $10,000` / `50%` / `50%` / `24 ساعة`).
+- Mobile hero headline legible over the lit emitter (the ninth run's
+  `DIM_ALPHA_COMPACT` fix still holding).
+- The tenth run's sparkle/iridescence richness fix is visibly present and
+  working in fresh screenshots — small bright particles scattered around
+  the object in both AR and EN, on both desktop and mobile. Not
+  re-compared against a reference image this run (no better live-3D-hero
+  reference exists in the swipe file than the mislabeled Active Theory
+  fallback the eleventh run already caveated — checked the other 8 sites'
+  screenshots for a usable substitute; none show a comparable particle-field
+  3D object, they're typographic/portfolio-listing pages. Nothing further
+  to compare against without a new reference asset, so not chasing this
+  further this run).
+- Language toggle mid-visit: hero object and stat counter both survive a
+  toggle correctly (re-confirms the third run's `key={dir}` remount
+  handling and counter fix still hold).
+
+**One false trail chased and closed:** an early test (toggling to EN only
+~200ms after page load, simulating an impatient visitor) produced a
+screenshot with no hero object visible at all, even after what looked like
+a generous wait — looked like a real regression at first. Traced it
+before writing it up: Playwright's `click()` on the language toggle
+blocks internally for several seconds (the intro overlay intercepts
+pointer events until it lifts, so the click physically can't land until
+then), meaning the actual "toggle happened" moment was always ~5.5-6.5s
+into the intro, not ~200ms — so the effective wait window was much
+shorter than intended. Reproduced twice more with corrected timing
+(explicit total-elapsed accounting, plus a `canvas`-presence poll): the
+object reliably appears in both languages once real elapsed time is
+accounted for correctly. Not a bug — a test-harness timing artifact, same
+family as several the eleventh run already logged (fullPage screenshot
+gaps, iPhone-13-preset `innerWidth` mismatch). Flagging the specific
+mechanism (auto-waiting `click()` blocked by the intro overlay's pointer
+capture) so a future run doesn't waste time re-discovering it.
+
+**Not touched this run, deliberately:** hero-delay (~7s) — per Aymean's
+own standing note and the eighth/eleventh runs' conclusions, this needs
+his creative call on intro duration, not another QA-loop measurement, so
+it was not re-measured or re-attempted here.
+
+**Untouched, per standing rules:** `portfolio-data.ts` anonymization,
+pricing figures, About section (still deliberately empty).
+
+**Still open, unchanged:** hero-delay (~7s, needs Aymean's call on intro
+duration — not re-measured this run); no live/authentic Active-Theory-style
+3D-hero reference exists in the repo to do a rigorous side-by-side against,
+though the richness fix itself reads well against the wider swipe file.
+
+**STATUS: NOT YET READY TO DEPLOY.** No code changes this run — clean
+build/lint, no spec regressions, no new bugs found across a real browser
+pass in both languages and a mobile viewport. One plausible-looking
+regression investigated and closed as a test-harness artifact rather than
+either "fixed" blind or left as an open question mark. Hero-delay is
+unchanged and still waiting on Aymean's creative-pacing call, not a code
+fix.
