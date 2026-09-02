@@ -235,3 +235,67 @@ missing screenshot files.
 toggle counter jank). One new, real craft-bar concern raised with hard data
 (7s to first paint of the hero's signature visual) that needs a design
 decision, not another audit pass. Plus the carried-over open items above.
+
+---
+
+## 2026-09-02 — fourth run, section-order spec gap fixed
+
+`git pull` — up to date. Newest commit (`e83f70f`, the counter fix above) was
+~1h35m old at start — clear of the 45-minute collision window, so audited
+and pushed. The other build session ("Intro sequence, stats, and 3D
+exam-light") has not pushed since `f947cce` (2026-08-28, several days ago
+now) — everything since has been this QA loop's own commits. No new builder
+activity to audit against; went deeper on a full section-by-section diff
+against `REBUILD_BRIEF.md` instead of re-checking runtime behavior already
+verified in prior entries.
+
+**Method:** `npm install`, `npm run build` (tsc + vite — clean), `npm run
+lint` (oxlint — same 6 pre-existing `only-export-components` warnings, no
+new ones). Then `npm install --no-save playwright` (reverted the incidental
+`package-lock.json` diff before touching anything) and drove a production
+`vite preview` build with real Chromium — desktop EN/AR at 1440px and mobile
+AR on `devices['iPhone 13']` real touch emulation, screenshotting every
+section and watching for console/page errors. Zero console errors in any
+of the three passes.
+
+**Checked and held up:** hero copy/stats/pricing numbers/portfolio
+anonymization all still correct; portfolio cards' pre-hover "static noise"
+look flat/dark in a static screenshot — verified this is the intended
+`card-static` CSS texture and not a broken-image regression (`naturalWidth`/
+`naturalHeight`/`complete` all confirmed via `page.evaluate` on all 7
+portfolio images — they load fine, the flat look is by design pre-hover).
+
+**Found and fixed:** `REBUILD_BRIEF.md` §3 confirms the section order as
+Hero → About → **Process/Services** → **Work/Portfolio** → Pricing →
+Contact. `App.tsx` actually rendered `<Portfolio />` before `<Process />` —
+the reverse of the confirmed order. This is not one of the brief's two
+listed open items (About copy, section-transition motif confirmation) —
+order is confirmed spec. Traced via `git log --follow -p` on `App.tsx`: this
+ordering predates the rebuild entirely (present in the original `ZayloGear`
+site commit `4156544`) and was simply carried forward unexamined through
+every rebuild commit — three prior QA-loop passes checked section
+*content* against the brief but never diffed section *order*. Fixed by
+swapping `<Process />` and `<Portfolio />` in `App.tsx`, and swapping the
+corresponding nav links in `site-nav.tsx` (`work`/`process` buttons) so the
+top nav still reads left-to-right (or right-to-left in AR) in the same
+order the sections actually appear — nav order and section order were
+previously self-consistent with each other but both wrong relative to the
+brief. Re-verified after the fix: `npm run build`/`lint` clean, and a fresh
+Playwright pass confirms `document.querySelectorAll('main > section')`
+now yields `top, about, process, work, pricing, contact` and the Arabic nav
+button labels (طريقة العمل / أعمالنا / الأسعار / تواصل — Process / Work /
+Pricing / Contact) appear in that same corrected order, no console errors.
+
+**Untouched, per standing rules:** `portfolio-data.ts` anonymization,
+pricing figures, About section (still deliberately empty).
+
+**Still open from prior entries, unchanged:** contact email domain
+(`contact@zaylogear.com` vs. "Zaylo Agency" brand — needs Aymean),
+`swipe_file.md`'s missing screenshot files (verbal description only), the
+hero's ~7s structural delay before its signature 3D object appears (needs a
+design call, not a QA-loop guess).
+
+**STATUS: NOT YET READY TO DEPLOY.** One real spec-conformance bug fixed
+this run (section order didn't match the brief). All previously-flagged
+open items above are unchanged and still open — none are new regressions,
+all still need Aymean's input rather than a code fix.

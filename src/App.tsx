@@ -28,8 +28,8 @@ function App() {
             <Hero />
             {/* Content-empty scaffold; see about.tsx. */}
             <About />
-            <Portfolio />
             <Process />
+            <Portfolio />
             <Pricing />
             <Contact />
           </main>
