@@ -131,3 +131,107 @@ and `docs/reference/swipe_file.md`'s missing screenshot files (verbal
 description only, no actual images to compare against).
 
 **STATUS: unchanged — NOT YET READY TO DEPLOY**, same reasons as above.
+
+---
+
+## 2026-09-02 — third run, real bug fixed
+
+`git pull` — up to date. Newest commit (`4082e82`, a prior no-change log
+entry from this same loop) was ~2h old at start — clear of the 45-minute
+collision window, so this run audited *and* pushed. No new commits from the
+other build session since `dee168d` (~4h old); nothing new to audit against
+the brief's confirmed spec, so this pass went deeper on runtime behavior
+instead of re-reading source against the brief line by line.
+
+**Method:** `npm install` + `npm run build` + `npm run lint` — clean, same 6
+pre-existing `only-export-components` warnings, no new ones. Then installed
+Playwright locally (`npm install --no-save playwright`, using the
+pre-installed Chromium at `/opt/pw-browsers/chromium`; not added to
+`package.json`/lockfile — reverted the incidental lockfile diff from the
+unrelated `npm install` before touching anything) to actually load the site
+and watch it, rather than re-asserting the previous entries' impressions
+unverified. Screenshotted `npm run dev` and a production `vite preview`
+build across AR/EN and desktop/mobile (real device emulation — `devices['iPhone 13']`
+via `newContext`, not just a resized desktop window, since a plain resize
+still reports `pointer: fine` and silently exercises the wrong code path).
+
+**Checked and held up:**
+- Portfolio hover/touch-reveal (`portfolio.tsx`'s `ScreenWipe`): confirmed
+  working correctly on real mobile emulation. First pass with a plain
+  390×844 resize (no touch emulation) made every card look permanently
+  stuck behind its static overlay — that turned out to be a false alarm
+  caused by the test itself (a resized desktop context still reports
+  `pointer: fine`, so `usePointerFine()` correctly took the hover-reveal
+  branch, and a scripted headless run never hovers). Re-tested with real
+  touch/coarse-pointer emulation and the scroll-triggered reveal fires
+  correctly. Not a bug — flagging the false trail so a future run doesn't
+  waste time rediscovering it via the same shortcut.
+- RTL layout: nav, hero, stat rail all correctly mirror in Arabic (default
+  locale); `scroll-pulse-spine.tsx` explicitly branches on `dir` and the rest
+  of the audited surface uses centered/JS-tracked positioning that doesn't
+  need to.
+- No console errors on load in either language, either viewport.
+
+**Found and fixed:** the hero's stat counter (`useCountUp` in
+`use-count-up.ts`) visibly breaks when switching language mid-visit.
+`reveal.tsx` deliberately remounts every `RevealGroup`/`RevealItem` on the
+page via `key={dir}` when the language toggles (documented, intentional —
+needed so RTL/LTR entry directions replay correctly, and already accepted
+as a tradeoff: "blocks currently on screen replay their reveal"). But that
+means every section's entrance animations fire at once on a single click,
+and the stat counter's own `setInterval`-paced count-up — designed to take
+~2s — was measured taking **~4.5s** wall-clock under that contention,
+because it counted *interval firings* (8 ticks × 240ms) rather than real
+elapsed time: a delayed firing just pushed the whole animation later instead
+of catching up. Confirmed with precise instrumented timing (not a visual
+guess) before and after. Fixed by deriving progress from
+`performance.now()` elapsed time inside each tick instead of an
+incrementing step counter, so a late tick jumps straight to the value it
+should already be at. Re-measured after the fix on the rebuilt production
+bundle, two runs: settles in ~1.4–1.5s now, matching the intended ~2s
+design regardless of concurrent reveal replay. The `key={dir}` remount
+itself is untouched — that tradeoff is deliberate and reasonable, this was
+specifically about the counter degrading further than it needed to under
+it. Single-file change (`src/lib/use-count-up.ts`), no change to the
+reveal/remount architecture, no change to the confirmed "80+" figure.
+
+**New finding, not fixed — flagging for a real design call:** the hero's
+signature exam-light 3D object does not appear on screen until **~7
+seconds** after page load, measured on a `vite preview` production build
+served from localhost (i.e. not a "slow connection" artifact — this
+reproduces with an effectively unthrottled network). Network trace: the
+`hero-scene` chunk's fetch doesn't even *start* until ~6994ms in. Root
+cause, read from `hero.tsx`'s own comments: this is intentional, not
+accidental — the 3D chunk's dynamic import is deliberately deferred until
+`SCENE_MOUNT_DELAY` (1.4s) after the intro overlay lifts, specifically to
+avoid the chunk's parse cost stealing the main thread from the headline's
+own reveal animation (a real, previously-measured contention bug per that
+file's history). The compounding factor is that the intro sequence itself
+(logo assemble → glow → hold → burst) takes ~5.5s before it lifts at all,
+so 5.5s + 1.4s ≈ the observed 7s. Previous entries in this log described
+the missing-hero-object gap as a "throttled connection" concern; that
+undersells it — it's structural, not networking, and happens on every
+visit regardless of connection speed. I did not touch this: the intro's own
+pacing (`intro-sequence.tsx`'s `ASSEMBLE_DURATION`/`GLOW_DURATION`/
+`HOLD_DURATION`/etc.) and the hero's scene-mount sequencing have both been
+iteratively tuned across several prior commits with real reasoning and real
+measurements already in them (see `hero.tsx`'s own comments on the specific
+contention bug `SCENE_MOUNT_DELAY` was added to fix). Shortening either
+without being able to re-verify the contention tradeoff properly risks
+reintroducing a bug that was already found and fixed once. This is a
+genuine craft-bar question — is a ~7s wait for the site's own signature
+visual acceptable for a landing page whose whole pitch is "judge us by the
+pixels" — that needs a conscious call from Aymean or a session with time to
+properly profile the contention, not a QA-loop guess.
+
+**Untouched, per standing rules:** `portfolio-data.ts` anonymization,
+pricing figures, About section (still deliberately empty).
+
+**Still open from prior entries, unchanged:** contact email domain
+(`contact@zaylogear.com` vs. "Zaylo Agency" brand), `swipe_file.md`'s
+missing screenshot files.
+
+**STATUS: NOT YET READY TO DEPLOY.** One real bug fixed this run (language-
+toggle counter jank). One new, real craft-bar concern raised with hard data
+(7s to first paint of the hero's signature visual) that needs a design
+decision, not another audit pass. Plus the carried-over open items above.
