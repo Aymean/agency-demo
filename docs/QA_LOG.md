@@ -299,3 +299,40 @@ design call, not a QA-loop guess).
 this run (section order didn't match the brief). All previously-flagged
 open items above are unchanged and still open — none are new regressions,
 all still need Aymean's input rather than a code fix.
+
+---
+
+## 2026-09-02 — Aymean's decisions on the three open items above
+
+Not a loop run — Aymean answered the three flagged items directly in chat:
+
+1. **Contact email confirmed correct.** `contact@zaylogear.com` stays as-is
+   despite the displayed brand being "Zaylo Agency" — domain matches
+   [[reference_zaylo_legal_identity]] (brand dropped "Gear," domain didn't).
+   **Close this item, it was never actually a bug.**
+2. **The ~7s delay before the exam-light hero appears is NOT acceptable.**
+   Aymean's exact words: "that is a lot man, people can't see it once they
+   load." This overrides the previous entry's "needs a design call, not a
+   QA-loop guess" — the call has been made. **Next run: this is the top
+   priority.** Get the hero's signature 3D object visible dramatically
+   sooner. The previous entry has the full diagnosis (5.5s intro +
+   `SCENE_MOUNT_DELAY` 1.4s + chunk fetch not starting until ~6994ms) and
+   flags a known past contention bug (`SCENE_MOUNT_DELAY` was added to stop
+   the 3D chunk's parse cost from stealing the main thread from the headline
+   reveal) — re-verify that tradeoff properly rather than blindly deleting
+   the delay, but the target is a real fix, not another flag. Options worth
+   evaluating: shortening the intro sequence itself, starting the chunk
+   fetch earlier (prefetch during the intro instead of after it lifts),
+   showing a lower-cost version of the object immediately while the full
+   scene loads, or re-profiling whether the original contention bug still
+   reproduces with the current bundle before assuming the delay is still
+   needed at its current length.
+3. **The real swipe_file.md screenshots exist and are now in the repo.**
+   They lived locally at `leadgen-agency/benchmark/screenshots/creative-craft/`
+   (never in any git repo) — all 9 sites confirmed present (18 files,
+   desktop+mobile, ~13MB), copied into
+   `docs/reference/screenshots/creative-craft/` and pushed. **The "visual
+   craft-bar comparison is unverified" caveat from every prior entry is
+   now closed** — future runs can and should actually look at these images
+   (`Read` supports image files) and compare the live build against them
+   directly, not work from swipe_file.md's text descriptions alone.
