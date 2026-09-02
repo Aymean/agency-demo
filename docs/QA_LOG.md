@@ -943,3 +943,139 @@ blind — the first of the two long-open items from the eighth run is now
 addressed (visual richness); the other (hero-delay) is unchanged and still
 needs the visual-judgment call on intro duration that only Aymean or a
 dedicated session can make.
+
+---
+
+## 2026-09-02 — eleventh run, closed two open questions, no bug found, one doc fix
+
+`git pull` — up to date at `3db38c6` (the tenth run's own log entry),
+~1h54m old at start — clear of the 45-minute collision window. Other build
+session ("Intro sequence, stats, and 3D exam-light") still hasn't pushed
+since `f947cce` (2026-08-28).
+
+**Method:** `npm install`, `npm run build` (clean, same 486.65KB/1017.10KB
+chunk split), `npm run lint` (same 6 pre-existing warnings, no new ones).
+`npm install --no-save playwright` (no lockfile diff this time), real
+Chromium against a production `vite preview` build.
+
+**Closed the tenth run's open "program-count" question.** That run added
+denser sparkles + an iridescent rim material but didn't re-measure the
+first-frame WebGL program count it might have affected. Built the
+immediately-prior commit (`1f69861`) in a separate worktree, served both
+builds side by side, and instrumented `linkProgram` calls plus
+`PerformanceObserver` longtasks on fresh-incognito-context loads of each:
+pre-fix = **14 programs**, post-fix = **15 programs** (the iridescent
+`meshPhysicalMaterial` is one new shader permutation, as expected). Total
+post-intro main-thread blocking was statistically the same between the two
+builds (pre-fix ~6.4-6.9s, post-fix ~6.5-7.0s, three runs each) — the
+richness fix cost exactly the +1 program it should have and did not
+meaningfully worsen the hero-delay problem. Safe to consider that question
+closed.
+
+**Important honest caveat on the absolute numbers above:** ~6.5-7s of
+post-intro blocking is much higher than the ~1.46s the seventh run measured
+after its `checkShaderErrors` fix. This is not a regression — it reproduces
+identically on both the pre- and post-richness-fix builds in this container,
+so it isn't caused by any code change. It's this session's own environment:
+software-rendered GPU performance clearly varies run-to-run and
+session-to-session (the log has flagged this noisy-sandbox caveat
+repeatedly since run six). Not chasing this further; flagging it so a
+future run doesn't mistake "my number is worse than the seventh run's" for
+a new regression when it's the same code.
+
+**Corrected a real factual error, three prior entries deep (fixed,
+pushed):** re-compared the current hero (post-tenth-run sparkle/iridescence
+fix) against
+`docs/reference/screenshots/creative-craft/global/active-theory-desktop.png`
+as the tenth run's own "still open" list asked for. Looked closely at the
+reference image this time: it visibly reads **"YOUR BROWSER IS NOT
+SUPPORTED"** across the top — this is Active Theory's no-WebGL/unsupported-
+browser fallback screen, not their real interactive 3D scene, corroborated
+by `swipe_file.md`'s own auto-tagged metadata for this exact entry ("hero:
+text-only"). The fifth, eighth, and tenth runs all used this image as "the
+Active Theory reference" and judged our object's particle density/material
+richness against it — a real craft signal (it's a deliberately-designed
+fallback, not a broken page) but not actually the live activetheory.net
+experience those entries described it as being. Added a caveat directly in
+`swipe_file.md` next to this entry (see that file) so future runs don't
+keep treating it as ground truth without the caveat. Did not revert any of
+the tenth run's sparkle/iridescence changes over this — they're good
+improvements on their own merits and directionally correct against the
+wider swipe file, just not verified against the specific image they were
+framed against.
+
+**Full spec re-check via real incremental scroll (not a single `fullPage`
+screenshot — see false trail below):** section order (`top → about(empty,
+0px, by design) → process → work → pricing → contact`, confirmed via
+`document.querySelectorAll('main > section')` heights/text), pricing copy
+(`$3,000-$10,000` / `50% للبدء` / `50% قبل التسليم` / `24h` in AR, `$3,000 -
+$10,000` in EN), portfolio anonymization, footer legal line, EN/AR nav
+mirroring — all match the brief. Zero console/page errors across AR
+desktop, EN desktop, and iPhone-13-emulated mobile loads.
+
+**Two false trails investigated and closed, logged so future runs don't
+re-spend time on them:**
+1. `page.screenshot({ fullPage: true })` on this build renders large blank/
+   black gaps between sections (looked like a severe rendering bug at
+   first glance). Confirmed false: incremental real-scroll screenshots
+   (mouse-wheel scrolling, not a single composite capture) show every
+   section's content rendering correctly. The composite `fullPage`
+   capture doesn't reliably drive whatever scroll-linked reveal state the
+   page depends on — a test-harness artifact, not a page bug.
+2. After clicking the language toggle, the custom cursor ring (`cursor.tsx`)
+   can end up visually sitting on top of unrelated header content (in one
+   capture, on top of the "AGENCY" wordmark). Traced this to the RTL↔LTR
+   mirror-flip moving the button the ring was tracking to the opposite side
+   of the header, while the ring itself (correctly) stays exactly where the
+   pointer physically is, since nothing fired a new `pointermove` after the
+   layout flipped. This is correct behavior for a custom cursor under a
+   full layout mirror — a real user's actual OS pointer would likewise
+   stay put and briefly overlap different content post-toggle — not a
+   functional defect worth changing.
+
+**One more false trail, worth flagging prominently since it could fool a
+future run:** `newContext({ ...devices['iPhone 13'] })` (Playwright's
+bundled mobile-device preset: `isMobile: true`, `hasTouch: true`,
+`deviceScaleFactor: 3`) produces an internal `window.innerWidth`/
+`innerHeight` inconsistent with the page's real `visualViewport`/
+`document.documentElement.clientWidth` in this headless Chromium — I
+initially read this as a real ~59px horizontal-overflow bug (the fixed
+header appeared to render 448px wide with a -58px left offset instead of
+0-390). Verified it's not a page bug: `visualViewport.width` was 390 at
+`scale: 1` and `document.documentElement.clientWidth`/`getBoundingClientRect`
+were consistently 390 throughout — only `window.innerWidth` and,
+oddly, actual fixed-position layout disagreed with those. Confirmed the
+cause is the emulation preset, not the site: switching to a plain
+`newContext({ viewport: { width: 390, height: 844 } })` with no mobile-
+device flags made `window.innerWidth`, `clientWidth`, `visualViewport`,
+and the header's real rendered box all agree at 390/0-390 with zero
+overflow. No WebKit binary is available in this environment to cross-check
+against real Safari engine behavior, but the internal inconsistency
+appearing and disappearing purely based on the CDP emulation flags (with
+no site code involved) is strong enough evidence on its own. Not a
+regression, not fixed, because there was nothing on the site to fix — but
+worth remembering next time `devices['iPhone 13']`-style emulation is used
+for anything involving `window.innerWidth` or fixed-position layout
+specifically (the touch/hover-reveal testing prior runs did with this same
+preset is unaffected — that relied on `pointer: coarse`/real touch
+dispatch, not `innerWidth`).
+
+**Untouched, per standing rules:** `portfolio-data.ts` anonymization,
+pricing figures, About section (still deliberately empty).
+
+**Still open, unchanged from the tenth run:** hero-delay (~7s in prior
+runs' consistent methodology, needs Aymean's visual-judgment call on intro
+duration, not another blind measurement); the visual-richness fix is now
+confirmed cheap (only +1 program) but still not verified against a
+genuinely live capture of Active Theory's real scene, since none exists in
+this repo.
+
+**STATUS: NOT YET READY TO DEPLOY.** No functional bugs found this run —
+everything audited held up. Real value this run was closing two of the
+tenth run's own open questions (program-count cost: cheap; and correcting
+a three-entries-deep misattribution of the Active Theory reference image)
+and ruling out three plausible-looking false alarms with hard evidence
+rather than either fixing them blind or leaving them as unresolved
+question marks for the next run. Hero-delay remains the one substantive
+open item, and it still needs Aymean's creative call, not more
+measurement.

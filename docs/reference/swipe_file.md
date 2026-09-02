@@ -851,6 +851,20 @@ _No sites captured in this pass._
 - booking/contact CTA above fold: False
 - standout sections: none detected
 - dominant color: #141522
+- **CAVEAT (added by the QA loop, 2026-09-02):** both screenshots for this
+  entry visibly show "YOUR BROWSER IS NOT SUPPORTED" — this is Active
+  Theory's no-WebGL/unsupported-browser fallback state from whatever
+  headless scraper captured it (consistent with the auto-tagged "hero:
+  text-only" above), not their actual interactive 3D scene. Three prior
+  QA-log entries (2026-09-02, fifth/eighth/tenth runs) used this image as
+  "the Active Theory reference" for the hero object's visual-richness bar —
+  the fallback's dense bokeh/iridescent-ring styling is still a real,
+  reasonable craft reference (it's a deliberately designed fallback, not a
+  broken page), but it is not the live activetheory.net experience those
+  entries described it as. Treat comparisons against this specific image
+  with that caveat; a real re-capture of the live WebGL scene (or a
+  screenshot from a browser Active Theory considers supported) would be a
+  more accurate reference if this comparison matters again.
 
 **Locomotive Studio** — [https://locomotive.ca](https://locomotive.ca)
 ![Locomotive Studio](screenshots/creative-craft/global/locomotive-studio-desktop.png)
