@@ -336,3 +336,91 @@ Not a loop run — Aymean answered the three flagged items directly in chat:
    now closed** — future runs can and should actually look at these images
    (`Read` supports image files) and compare the live build against them
    directly, not work from swipe_file.md's text descriptions alone.
+
+---
+
+## 2026-09-02 — fifth run, audit-only (collision window)
+
+`git pull` — up to date at `2dfee8b` (Aymean's own commit resolving the
+three prior open items — not the other builder session). That commit was
+~34 minutes old at the start of this run and still ~40 minutes old by the
+time the audit below was done, under the 45-minute threshold both times —
+per standing instructions, **audit and record findings only, no pushes
+this run**, even though one of the findings below (the hero delay) is now
+flagged by Aymean himself as top priority. Held off anyway: the rule is
+about not colliding with in-flight work generically, not about who
+authored the most recent commit.
+
+**Method:** `npm install`, `npm run build` (tsc + vite — clean, same
+486KB/1017KB main/hero-scene chunk split as before), `npm run lint`
+(oxlint — same 6 pre-existing `only-export-components` warnings, no new
+ones). Spec re-check: section order (`Hero → About → Process → Portfolio →
+Pricing → Contact` in `App.tsx`) still matches the brief, pricing copy
+still reads `$3,000 - $10,000` / `50% to start` / `50% before delivery` /
+"Live in under 24h" in both `i18n.tsx` locales, `about.tsx` is still the
+deliberate content-empty scaffold, no names in `portfolio-data.ts` beyond
+its own anti-fabrication comments. No regressions found in any of these.
+
+**Re-verified the top-priority item (hero object invisible for ~7s):**
+installed Playwright temporarily (`npm install --no-save playwright`,
+reverted the `package-lock.json` diff after, nothing committed), built +
+served a production `vite preview`, and drove real Chromium against it.
+First attempt reused one browser context across three timed reloads and
+looked like the object was already visible by 5.3s — which would have
+meant the bug was gone. That was wrong: reusing the context meant
+`sessionStorage`'s `INTRO_FLAG` (see `intro.tsx`) was already set from the
+first reload, so the second and third reloads skipped the intro replay
+entirely and `contentReady` flipped almost immediately instead of at the
+intro's real ~5s resolve beat — not a representative first-visit load.
+Redid it correctly with a **fresh incognito browser context per
+measurement** (no shared storage) and logged the actual `hero-scene` chunk
+request timestamp via `page.on('request')`:
+
+- Screenshots at 3.0s and 5.3s: hero section shows only headline/copy/
+  stats, zero trace of the exam-light object — plain dark background.
+- `hero-scene` chunk's first network request measured at **6860–7014ms**
+  after `load`, across three independent fresh-context loads — matching
+  the prior entry's ~6994ms almost exactly. This is not a fluke or a
+  network artifact; it's `contentReady` (~5.0s, the intro's `RESOLVE_AT`)
+  plus `SCENE_MOUNT_DELAY` (1.4s) in `hero.tsx`, deterministic and
+  independent of connection speed.
+
+**Confirmed: still unfixed, still real, still the top priority per
+Aymean's standing decision from the previous entry.** Did not fix it this
+run (collision window). Concrete direction for whichever run is next clear
+to push: the contention `SCENE_MOUNT_DELAY` guards against is the ~960KB
+chunk's *parse/execute* cost stealing the main thread from the headline's
+reveal — not its *network fetch*. Those can be decoupled: warm the
+`hero-scene` chunk's network fetch during the ~5s intro (e.g. a
+`modulepreload` hint or an early `import()` call whose result is just held,
+not rendered) so the bytes are already on the client by the time
+`SCENE_MOUNT_DELAY` elapses, while still not mounting/executing the
+component until after the headline reveal as today. That should collapse
+the visible gap to roughly `SCENE_MOUNT_DELAY` + parse time instead of
+`SCENE_MOUNT_DELAY` + full fetch + parse. Re-verify the original contention
+bug still reproduces (per `hero.tsx`'s own comments) before assuming this
+is safe — that's the one real risk in this approach the next run needs to
+actually measure, not assume.
+
+**New, unconfirmed craft-bar flag:** compared a screenshot of the fully-
+resolved hero object (dark disc exam-light + articulated arm, teal glow)
+against `docs/reference/screenshots/creative-craft/global/active-theory-
+desktop.png`. The reference has a particle field, iridescent/chromatic
+material on the ring, and visible atmospheric depth; our object reads
+flat and plain by comparison — no particles, no bloom/depth, a single flat
+glow color. Flagging this honestly rather than assuming it's fine, but a
+static screenshot can't judge the shader's live micro-motion or how it
+reads while scrolling/rotating, so this is a flag for a future run with
+time to actually watch it move, not a confirmed verdict.
+
+**Untouched, per standing rules:** `portfolio-data.ts` anonymization,
+pricing figures, About section (still deliberately empty).
+
+**Still open from prior entries, unchanged:** `swipe_file.md`'s prose vs.
+the now-real screenshots (spot-checked one this run, matches).
+
+**STATUS: NOT YET READY TO DEPLOY.** No code changes this run by design
+(collision window). Confirmed the hero-delay bug is real, reproducible,
+and still the top priority — with a concrete, testable direction for the
+fix — plus one new unconfirmed craft-bar flag on the resolved object's
+visual richness versus the Active Theory reference.
