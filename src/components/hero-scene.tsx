@@ -681,7 +681,29 @@ export function HeroScene({
       // headline, subhead, CTA and stats, and the moment it accepts events
       // that copy stops being selectable and the CTA stops being clickable.
       style={{ pointerEvents: 'none' }}
-      onCreated={() => onReady?.()}
+      // three.js's WebGLProgram defaults `debug.checkShaderErrors` to true even
+      // in production builds. That flag gates a call to
+      // `gl.getProgramParameter(program, gl.LINK_STATUS)` after every single
+      // `linkProgram()` — and that specific call is a synchronous GPU sync
+      // point: it forces the JS thread to block until the driver has actually
+      // finished compiling+linking, rather than letting compilation happen
+      // off-thread the way WebGL drivers with KHR_parallel_shader_compile
+      // support can. Profiled directly (CPU profile + PerformanceObserver
+      // longtask entries on a fresh load of the production build): this scene
+      // compiles 10+ distinct programs (the exam light's several
+      // meshStandardMaterials, the beam's ShaderMaterial, Environment's
+      // lightformers, Bloom's EffectComposer passes) on first render, and the
+      // profile's single hottest frame by a wide margin was this exact
+      // function (three's `checkLinkStatus`), coinciding with a ~1.6-1.7s
+      // long task right when the object is supposed to become visible.
+      // Skipped only in production: dev keeps real-time shader error
+      // reporting, which is genuinely useful while iterating on the GLSL
+      // above and costs nothing there since it's not the path being measured
+      // for time-to-visible.
+      onCreated={(state) => {
+        if (import.meta.env.PROD) state.gl.debug.checkShaderErrors = false
+        onReady?.()
+      }}
     >
       <ResponsiveCamera halfW={layout.halfW} halfH={layout.halfH} />
       <ambientLight intensity={0.55} />
