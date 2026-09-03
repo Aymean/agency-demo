@@ -1477,3 +1477,97 @@ regression. Standard build/lint/spec checks and a real-browser pass across
 desktop AR/EN and mobile AR found nothing else. Both standing open items
 are unchanged and still non-actionable by this loop for the reasons logged
 in prior entries.
+
+---
+
+## 2026-09-03 — seventeenth run, clean pass, no material change
+
+`git pull origin master` against a detached `HEAD` left over from a prior
+run (same harmless pattern the twelfth/fifteenth runs noted — local
+`master` was actually 30 commits behind until `git checkout master` +
+`git pull` fast-forwarded it; the intermediate old commit briefly resolved
+to, `7d45244` "Remove the ~0.9s dead pause before the panel starts
+resolving", is pre-rebuild history already in the log's very first entries,
+not new work from the dormant other session — checked `git log --oneline`
+to confirm this, not a live finding). Landed at `da4cf1b` (the sixteenth
+run's own log entry), ~48 minutes old at start — clear of the 20-minute
+hourly-cadence collision buffer. Other build session ("Intro sequence,
+stats, and 3D exam-light") still hasn't pushed since `f947cce`
+(2026-08-28) — nothing new to audit against the brief.
+
+**Note on this run's own scheduled prompt:** same stale "top open items"
+snapshot the fourteenth/fifteenth/sixteenth runs already flagged (describes
+the visual-richness gap as unattempted — it was fixed in the tenth run,
+confirmed cheap in the eleventh, re-confirmed present in every run since).
+Treated the log's actual still-open list (hero-delay only, needs Aymean's
+call; no better reference image) as ground truth, per standing
+instructions.
+
+**Method:** `npm install` (reverted the incidental `package-lock.json`
+diff, same recurring false alarm), `npm run build` (clean, identical
+486.65KB/1017.10KB chunk split to every run since the tenth — no drift),
+`npm run lint` (same 6 pre-existing `only-export-components` warnings, no
+new ones). Spec spot-check from source: `App.tsx` section order (`Hero →
+About → Process → Portfolio → Pricing → Contact`), `i18n.tsx` pricing copy
+both locales (`$3,000 - $10,000` / `50% للبدء` / `50% قبل التسليم` / `24
+ساعة`), `portfolio-data.ts` (0 `name:` fields, 7 real `label:` entries —
+the type-interface declaration line makes a naive grep count 8, checked
+each match individually to confirm — all still anonymized "Gulf ..."
+pattern) — all match brief, no regressions.
+
+**Live pass:** `npm install --no-save playwright` (no lockfile diff this
+time), served a production `vite preview` build, drove real Chromium
+(`/opt/pw-browsers/chromium`) across desktop AR (default, 8s wait), desktop
+EN with a mid-load language toggle (~6.5s in, past the intro's
+pointer-capture window per the twelfth run's note), and mobile AR
+(390×844, `hasTouch`/`isMobile` set directly, not the `devices['iPhone
+13']` preset, per the eleventh run's note on that preset's `innerWidth`
+artifact). Zero console/page errors in all three.
+`document.querySelectorAll('main > section')` confirms `top → about →
+process → work → pricing → contact` at runtime. Screenshots: mobile AR
+headline still legible over the lit emitter (ninth run's
+`DIM_ALPHA_COMPACT` fix holding), desktop EN toggle shows correct nav order
+(Process/Work/Pricing/Contact), correct stats (`80+` / `$0`), sparkle field
+from the tenth run's richness fix visibly present, "AR" toggle button
+correctly offered (confirms it was actually showing EN content, not a
+toggle no-op).
+
+**One measurement wobble investigated, not a bug:** an initial three-context
+script (all three passes in one Node process) showed 0 canvases in the
+desktop-AR context after an 8-second wait — looked like a possible
+hero-delay regression at first glance. Re-tested in isolation with
+per-checkpoint screenshots (5.0s/6.0s/6.5s/7.0s/7.5s/8.0s/9.0s/10.0s/12.0s):
+canvas appears at the 7.0s checkpoint (matching every prior run's ~7-7.5s
+number) and stays present after. The single anomalous run also showed one
+checkpoint's wait taking ~2.9s longer than requested
+(`page.waitForTimeout(500)` resolving at +2905ms) — a real main-thread
+stall, but exactly the kind of noisy-software-GPU variance this log has
+flagged repeatedly since run six (three browser contexts competing for one
+CPU in this sandboxed container), not a code regression. Confirmed by
+re-running the isolated single-context version cleanly twice with a
+consistent ~7.0-7.1s canvas-appearance time both times.
+
+**Not touched this run, deliberately:** hero-delay (~7s) — still needs
+Aymean's creative-pacing call on intro duration, not another measurement.
+Visual richness vs. Active Theory — already shipped and confirmed cheap;
+no better live reference image exists in the repo to compare against
+further.
+
+**Untouched, per standing rules:** `portfolio-data.ts` anonymization,
+pricing figures, About section (still deliberately empty).
+
+**Still open, unchanged:** hero-delay (~7s, needs Aymean's call on intro
+duration); no live Active-Theory-style 3D-hero reference image exists for
+a further side-by-side.
+
+**STATUS: NOT YET READY TO DEPLOY.** No code changes this run — build,
+lint, spec spot-checks, and a real-browser pass (desktop AR/EN with a
+language toggle, mobile AR) all clean, zero new bugs, zero regressions.
+One timing wobble chased to ground and closed as environment noise rather
+than left as an open question. Both standing open items are unchanged and
+still non-actionable by this loop for the reasons logged in prior entries —
+this is now the fourth consecutive clean, no-material-change hour; the
+build itself appears stable and everything within this loop's reach has
+been verified repeatedly. The two remaining items are genuinely blocked on
+Aymean (a creative-pacing call on intro duration, and a missing reference
+asset), not on further QA-loop passes.
