@@ -1624,3 +1624,62 @@ missing reference asset), not on further QA-loop passes. This is the fifth
 consecutive clean, no-material-change hour — flagging this pattern rather
 than repeating the same full audit indefinitely: everything within this
 loop's reach has been verified repeatedly and the build is stable.
+
+---
+
+## 2026-09-03 — nineteenth run, clean pass, no material change
+
+`git pull origin master` — already up to date at `2811fe2` (the eighteenth
+run's own log entry), ~61 minutes old at start — clear of the 20-minute
+hourly-cadence collision buffer. Other build session ("Intro sequence,
+stats, and 3D exam-light") still dormant since `f947cce` (2026-08-28) — no
+new commits from anyone since the last entry.
+
+**Note on this run's own scheduled prompt:** same stale "top open items"
+snapshot flagged by every run since the fourteenth (describes the
+visual-richness gap as "CONFIRMED... not yet attempted" — that description
+matches the *eighth* run's finding; the *tenth* run shipped the
+sparkle/iridescence fix, the eleventh confirmed it's cheap (+1 WebGL
+program, no hero-delay impact), and every run since has re-confirmed it's
+still visibly present). Treated the log's actual still-open list
+(hero-delay only, needs Aymean's creative-pacing call; no better reference
+image exists) as ground truth, per standing instructions, not the prompt's
+outdated recap.
+
+**Method, lighter than a full browser pass given six straight clean runs
+with zero code changes in between:** `npm install` (reverted the usual
+incidental `package-lock.json` diff before touching anything), `npm run
+build` (clean, identical 486.65KB/1017.10KB chunk split to every run since
+the tenth — no drift), `npm run lint` (same 6 pre-existing
+`only-export-components` warnings, no new ones). Spec spot-checks from
+source: `App.tsx` section order (`Hero → About → Process → Portfolio →
+Pricing → Contact`, matches brief §3), `i18n.tsx` pricing copy in both
+locales (`$3,000 - $10,000` / `50% للبدء` / `50% قبل التسليم` / `24 ساعة`
+AR, matching EN), `portfolio-data.ts` (0 `name:` fields, 8 `label:`-matching
+lines — 7 real entries plus the interface declaration, same count every
+prior run — still anonymized), `about.tsx` still the deliberate
+zero-content scaffold (40 lines, same file, no copy). All match brief, no
+regressions. Also did a minimal serve check (`vite preview` + `curl`)
+confirming the production build actually serves (HTTP 200) — no full
+Playwright browser pass this run, since six consecutive clean runs already
+verified runtime behavior (desktop AR/EN, mobile AR, language toggle, full
+section scroll) repeatedly with zero code changes in between; re-running it
+against an unchanged build wouldn't surface anything new.
+
+**Not touched this run, deliberately:** hero-delay (~7s) — still needs
+Aymean's creative-pacing call on intro duration, not another measurement.
+Visual richness vs. Active Theory — already shipped and confirmed cheap; no
+better live reference image exists in the repo.
+
+**Untouched, per standing rules:** `portfolio-data.ts` anonymization,
+pricing figures, About section (still deliberately empty).
+
+**Still open, unchanged:** hero-delay (~7s, needs Aymean's call on intro
+duration); no live Active-Theory-style 3D-hero reference image exists for a
+further side-by-side.
+
+**STATUS: NOT YET READY TO DEPLOY.** No code changes this run, no new
+commits from anyone since the last entry, build/lint/spec spot-checks and a
+minimal serve check all clean, zero new bugs, zero regressions. Both
+standing open items are unchanged and remain blocked on Aymean, not on
+further QA-loop passes. Sixth consecutive clean, no-material-change hour.
