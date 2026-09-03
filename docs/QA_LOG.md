@@ -2464,3 +2464,149 @@ minimal serve check all clean, zero new bugs, zero regressions. Both
 standing open items are unchanged and remain blocked on Aymean, not on
 further QA-loop passes. Seventeenth consecutive clean, no-material-change
 hour.
+
+---
+
+## 2026-09-03 — thirty-first run, dug into a possibly-real mobile rendering gap, inconclusive
+
+`git checkout master` (session started detached at `c74e773`, same harmless
+pattern noted repeatedly) then `git pull origin master` — already up to date
+at `c74e773` (the thirtieth run's own log entry), ~59 minutes old at start —
+clear of the 20-minute hourly-cadence collision buffer. Other build session
+("Intro sequence, stats, and 3D exam-light") still dormant since `f947cce`
+(2026-08-28) — confirmed via `git log --oneline f947cce..HEAD --
+':!docs/QA_LOG.md'`, still only this loop's own 10 fix commits — eighteenth
+consecutive quiet hour from that side.
+
+**Note on this run's own scheduled prompt:** the "top open items" recap it
+carries (visual-richness gap "CONFIRMED... not yet attempted") is the same
+stale snapshot every run since the fourteenth has flagged — the tenth run
+shipped the sparkle/iridescence fix, the eleventh confirmed it's cheap, and
+every run since has re-confirmed it's present and unregressed. Treated the
+log's actual still-open list (hero-delay only, blocked on Aymean's
+creative-pacing call) as ground truth, not the prompt's recap.
+
+**Method:** `npm install` (the usual incidental `package-lock.json`
+`libc`-field diff appeared again, reverted before touching anything). `npm
+run build` (clean, identical 486.65KB/1017.10KB main/hero-scene chunk split
+to every run since the tenth — no drift). `npm run lint` (same 6
+pre-existing `only-export-components` warnings, no new ones). Spec
+spot-checks from source: `App.tsx` render order (`Hero → About → Process →
+Portfolio → Pricing → Contact`), `i18n.tsx` pricing copy both locales
+(`$3,000 - $10,000` / `50% to start` / `50% before delivery` / `Live in
+under 24h` EN; `50% للبدء` / `50% قبل التسليم` / `24 ساعة` AR),
+`portfolio-data.ts` (0 `name:` fields, 8 `label:`-matching lines, same count
+every prior run), `about.tsx` unchanged (deliberate zero-content scaffold),
+`contact.tsx`'s `EMAIL` unchanged (`contact@zaylogear.com`). All match
+brief, no regressions.
+
+**Did a real browser pass** — the twenty-ninth run did the last one, the
+thirtieth used the one-skip allowance; re-grounded in live verification
+rather than skipping a second time. `npm install --no-save playwright` (no
+lockfile diff), served the production build (`curl` confirmed HTTP 200),
+drove real Chromium (`/opt/pw-browsers/chromium-1194`). Desktop AR
+(1440×900, 8s wait) and a desktop EN language-toggle pass both came back
+clean — zero console errors, correct section order at runtime, correct nav
+order/stats after the toggle. One test-harness snag worth logging: the
+toggle button's `locator.click()` needs an ~8s actionability timeout, not
+the 3s I first tried — the button sits under the intro's continuous
+hover/parallax transform and Playwright's "stable" check doesn't settle
+quickly under that motion. Not a bug, just a timeout tuned too tight; noting
+the mechanism so a future run doesn't waste time on it.
+
+**The substantial part of this run: a mobile-only finding that doesn't
+resolve cleanly, writing it up in full rather than picking a side without
+enough evidence.** Standard mobile pass (390×844, `hasTouch`/`isMobile` set
+directly per the eleventh run's guidance) at the usual 8s wait showed the
+hero canvas present (`canvasCount: 1`, zero console errors) but the exam-
+light object essentially invisible — no glow, no sparkles, just a flat dark
+silhouette. Before assuming a regression, pushed the wait much further
+(13s, 20s, 35s, fresh contexts each time) since the sandbox's GPU-noise
+variance has repeatedly produced long stalls before (seventeenth run: a
+single checkpoint wait overran by ~2.9s; today's own desktop checkpoint
+run — see below — overran one checkpoint by ~4.8s). At 35s the mobile
+object was still just a dim silhouette: headline/arm/base visible, zero
+visible emitter glow, zero visible sparkles. A matched desktop crop at the
+same 35s wait showed the full lit teal glow and sparkle field clearly, so
+this isn't simply "give it more time."
+
+Isolated the variable rather than guessing: a plain 390px-wide context with
+no `hasTouch`/`isMobile` flags at all showed the glow rendering normally at
+the same wait. Re-adding `hasTouch: true` alone still rendered normally.
+Only `isMobile: true` (Playwright/CDP's mobile-viewport device-metrics
+override) reproduced the dim/no-glow state — reproduced 4 times across
+different waits and device-scale-factor values (1 and 3), and reproduced
+identically on a direct repeat of the exact `hasTouch: true, isMobile: true,
+deviceScaleFactor: 3` config every mobile pass since the eleventh run has
+used. That repeat-reproduction rules out ordinary run-to-run flakiness —
+this is deterministic in this environment, tied specifically to the
+`isMobile` CDP flag.
+
+Read `hero.tsx`, `hero-scene.tsx`, `use-should-render-3d.ts`, and
+`use-pointer-fine.ts` looking for any code path that branches on touch
+capability, `hover`/`pointer` media queries, or mobile detection that could
+explain this. Found none — `useSceneTier()` is a pure `max-width: 767px`
+check (not touch-based), `useDragOrbit` is already disabled on the compact
+tier regardless of pointer type and attaches no listeners when disabled,
+and nothing else in the emitter/glow/sparkle rendering path (`power`,
+`fade`, `Sparkles` opacity/count) reads touch or mobile signals. Also
+checked `requestAnimationFrame` was actually firing in the `isMobile`
+context (it was, at a similarly low ~6-7fps as the non-mobile context in
+this software-rendered sandbox) — so it isn't simply frozen.
+
+**Honest conclusion: inconclusive, not fixed.** This is either (a) a real
+rendering gap specific to how real mobile users' devices resolve this
+scene, or (b) a Chromium CDP `isMobile: true` device-emulation artifact
+specific to this sandboxed, software-rendered environment — the same
+category of emulation quirk the eleventh run already documented for
+`window.innerWidth`/layout (there, switching off the full
+`devices['iPhone 13']` preset fixed it; here, even the minimal
+`isMobile: true` flag alone reproduces it, without the rest of that
+preset). No touch/mobile-conditional code path exists to explain a real
+bug, which leans toward (b) — but the effect is deterministic and repeated,
+not noisy, which is the pattern a real bug would also show, so I'm not
+confident enough to write this off. Directly contradicts several prior
+"clean" entries (twelfth through twenty-ninth runs) that described the
+mobile sparkle field and lit emitter as visibly present — either those
+checks weren't zoomed in tightly enough to catch a real, standing issue
+(most were checking headline legibility over the emitter, not the glow's
+own visibility), or this specific reproduction is itself the anomaly. Did
+not push a fix: there is no code-level mechanism identified to fix, and
+shipping a speculative change against an unconfirmed root cause risks
+masking a real GPU-rendering issue with a change that only alters emulator
+behavior. Concrete next step for whoever picks this up: test on a real
+phone or a browser with real (non-software) GPU acceleration if one becomes
+available in this environment, since that would settle (a) vs. (b)
+directly in a way no more Playwright instrumentation can.
+
+**Also ran, alongside the above:** the checkpoint-timing method from the
+seventeenth run on desktop (5s/6s/6.5s/7s/7.5s/8s/9s/10s/12s), confirming
+the object still isn't visible at the 7.0s checkpoint and is fully lit with
+sparkles by the next one — consistent with every prior run's ~7-7.5s
+number. One checkpoint this run overran its requested wait by ~4.8s
+(noisy-sandbox variance, same family flagged since run six), not a
+regression.
+
+**Not touched this run, deliberately:** hero-delay (~7s) — still needs
+Aymean's creative-pacing call on intro duration, not another measurement.
+
+**Untouched, per standing rules:** `portfolio-data.ts` anonymization,
+pricing figures, About section (still deliberately empty).
+
+**Still open:** hero-delay (~7s, needs Aymean's call on intro duration); no
+live Active-Theory-style 3D-hero reference image exists for a further
+side-by-side; **new, unresolved** — the mobile emitter-glow/sparkle
+visibility question above, which needs either a real device/real-GPU test
+or a future run building instrumented WebGL readback to settle definitively
+— not something to keep re-measuring blind in this same headless sandbox.
+
+**STATUS: NOT YET READY TO DEPLOY.** No code changes this run — build,
+lint, spec spot-checks, and a real desktop browser pass (AR, EN with
+language toggle) all clean. Most of this run's time went to a mobile-only
+rendering question that could not be resolved to either "bug" or "false
+trail" with the tools available in this sandbox, unlike every prior false
+trail this log has closed — writing it up in full with the isolation method
+used, rather than either shipping a blind fix or silently re-flagging it as
+already-closed, so a future run (or one with access to real hardware) picks
+up from an honest, evidenced state rather than repeating this same
+isolation work from scratch.
