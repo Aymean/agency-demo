@@ -1169,3 +1169,73 @@ regression investigated and closed as a test-harness artifact rather than
 either "fixed" blind or left as an open question mark. Hero-delay is
 unchanged and still waiting on Aymean's creative-pacing call, not a code
 fix.
+
+---
+
+## 2026-09-03 — thirteenth run, clean pass, no material change
+
+`git pull` — up to date at `174931e` (the twelfth run's own log entry),
+~52 minutes old at start — clear of the 20-minute hourly-cadence collision
+buffer, so clear to push if anything turned up. Other build session
+("Intro sequence, stats, and 3D exam-light") still hasn't pushed since
+`f947cce` (2026-08-28).
+
+**Method:** `npm install` (reverted the incidental `package-lock.json`
+`libc`-field diff before touching anything — same recurring false alarm),
+`npm run build` (clean, identical 486.65KB/1017.10KB chunk split to every
+run since the tenth — no drift), `npm run lint` (same 6 pre-existing
+`only-export-components` warnings, no new ones). Spec spot-check straight
+from source: `App.tsx` import/render order (`Hero → About → Process →
+Portfolio → Pricing → Contact`), `i18n.tsx` pricing copy in both locales
+(`$3,000 - $10,000` / `50% للبدء` / `50% قبل التسليم` / `24 ساعة` AR,
+matching EN equivalents), `portfolio-data.ts` (7 `label:` entries, zero
+`name:` fields, all still the anonymized "Gulf ..." pattern) — all match
+brief, no regressions.
+
+**Live pass:** `npm install --no-save playwright` (no lockfile diff this
+time), served a production `vite preview` build, drove real Chromium
+(`/opt/pw-browsers/chromium`) across desktop AR (default, full scroll
+through every section via `scrollIntoViewIfNeeded`), desktop EN (with a
+mid-session language toggle), and mobile AR (390×844, `hasTouch`/`isMobile`
+flags set directly rather than the `devices['iPhone 13']` preset, per the
+eleventh run's note that the preset's `innerWidth` disagrees with the
+page's real layout in this headless Chromium). Zero console/page errors in
+all three contexts. Runtime section-order check
+(`document.querySelectorAll('main > section')`) confirms `top → about(0px)
+→ process → work → pricing → contact`, matching source.
+
+**Checked and held up, no changes needed:** hero headline/stats/pricing
+correct in both languages; sparkle field and iridescent rim from the tenth
+run's richness fix visibly present in fresh screenshots; mobile headline
+still legible over the lit emitter (ninth run's `DIM_ALPHA_COMPACT` fix
+holding); language toggle mid-visit doesn't break the hero object or stat
+counter; pricing/contact/footer correct (`contact@zaylogear.com`, `$3,000 -
+$10,000`, `50%`/`50%`/`24h` in both locales). No new bugs found.
+
+**Not touched this run, deliberately:** hero-delay (~7s) — per Aymean's
+standing note and the eighth/twelfth runs' conclusions, the only lever with
+real headroom (shortening the intro) is a creative-pacing call for Aymean,
+not something to keep re-measuring, so it wasn't re-measured here. Visual
+richness vs. Active Theory — the tenth run's fix is shipped and confirmed
+cheap (eleventh run: +1 WebGL program, no meaningful hero-delay impact);
+no better live-3D-hero reference exists in the repo than the fallback
+screen the eleventh run already caveated (checked again this run — same
+conclusion as the twelfth run's search), so there's nothing further to
+compare against without a new reference asset.
+
+**Untouched, per standing rules:** `portfolio-data.ts` anonymization,
+pricing figures, About section (still deliberately empty).
+
+**Still open, unchanged:** hero-delay (~7s, needs Aymean's call on intro
+duration); no live Active-Theory-style 3D-hero reference image exists to
+do a further side-by-side against (richness fix itself already shipped and
+verified cheap).
+
+**STATUS: NOT YET READY TO DEPLOY.** No code changes this run — build/lint
+clean, spec spot-checks and a full real-browser pass (desktop AR/EN,
+mobile AR, language toggle, full section scroll) found zero regressions
+and zero new bugs. Both standing open items are at the point where further
+QA-loop measurement wouldn't add anything: hero-delay needs Aymean's
+creative-pacing call, and the richness fix has no better reference image
+to compare against. Legitimate no-material-change run, not a rubber
+stamp — verified via build, lint, and a live pass rather than skipped.
