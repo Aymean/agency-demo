@@ -2610,3 +2610,112 @@ used, rather than either shipping a blind fix or silently re-flagging it as
 already-closed, so a future run (or one with access to real hardware) picks
 up from an honest, evidenced state rather than repeating this same
 isolation work from scratch.
+
+---
+
+## 2026-09-03 — thirty-second run, tested and ruled out one hypothesis on the mobile-glow question, no fix shipped
+
+`git pull origin master` — up to date at `9f5ed2c` (the thirty-first run's
+own log entry), ~44 minutes old at start — clear of the 20-minute
+hourly-cadence collision buffer. Other build session ("Intro sequence,
+stats, and 3D exam-light") still dormant since `f947cce` (2026-08-28) —
+confirmed via `git log --oneline f947cce..HEAD -- ':!docs/QA_LOG.md'`,
+still only this loop's own 10 fix commits — nineteenth consecutive quiet
+hour from that side.
+
+**Note on this run's own scheduled prompt:** the "top open items" recap it
+carries (visual-richness gap "CONFIRMED... not yet attempted") is the same
+stale snapshot every run since the fourteenth has flagged — the tenth run
+shipped the sparkle/iridescence fix long ago. Treated the log's actual
+still-open list as ground truth: hero-delay (blocked on Aymean) and the
+thirty-first run's new, unresolved mobile emitter-glow question.
+
+**Method:** `npm install` (usual incidental `package-lock.json`
+`libc`-field diff, reverted before touching anything). `npm run build`
+(clean, identical 486.65KB/1017.10KB chunk split to every run since the
+tenth). `npm run lint` (same 6 pre-existing `only-export-components`
+warnings, no new ones). Spec spot-checks from source: `App.tsx` render
+order (`Hero → About → Process → Portfolio → Pricing → Contact`),
+`i18n.tsx` pricing copy both locales (`$3,000 - $10,000` / `50% to start`
+/ `50% before delivery` / `Live in under 24h` EN; `50% للبدء` / `50% قبل
+التسليم` / `24 ساعة` AR), `contact.tsx`'s `EMAIL` unchanged
+(`contact@zaylogear.com`). All match brief, no regressions.
+
+**Picked up the thirty-first run's inconclusive mobile emitter-glow
+finding rather than re-treading the rest of the brief.** That run isolated
+the effect to Playwright/CDP's `isMobile: true` flag specifically (not
+`hasTouch`, not viewport width) and found no application code path that
+branches on it, leaving two live hypotheses: (a) a real rendering gap on
+actual mobile devices, or (b) a sandboxed-Chromium/CDP emulation artifact.
+It flagged `hero-scene.tsx`'s `powerPreference: 'high-performance'` context
+hint as one plausible mechanism for (b) — requesting a specific GPU tier
+could resolve differently under `isMobile` emulation in a software-rendered
+sandbox. I didn't see that specific hypothesis spelled out in that run's
+entry, but reading `hero-scene.tsx` myself surfaced it as the only
+GPU-context-selection knob in the scene, so it was worth an actual test
+rather than another guess.
+
+**Tested it directly, with a real before/after build, not asserted:**
+reproduced the thirty-first run's baseline first (`isMobile: true` on
+390×844, `deviceScaleFactor: 3`, fresh incognito context, 9s wait) —
+confirmed the same dim/no-glow silhouette via screenshot. Also noticed,
+and am flagging as new evidence even though it doesn't change the
+conclusion below: the `isMobile: true` screenshot shows real layout
+artifacts alongside the dim glow — hero content shifted right with a blank
+margin on the left, a stray semi-transparent fragment peeking in at the
+top-left edge, and an empty dark box appearing below the stats row that
+isn't part of the actual page structure. These don't match any layout bug
+a real user could hit (no prior run in 31 passes has seen anything like
+it, and nothing in the codebase conditionally renders extra boxes), which
+reads as further evidence for hypothesis (b) — some CDP mobile-emulation
+compositing quirk specific to this sandbox — rather than (a).
+
+Then patched `powerPreference: 'high-performance'` → `'default'` in
+`hero-scene.tsx` (the single line, no other changes), rebuilt
+(`tsc`/`vite` clean), served fresh, and re-ran the identical `isMobile:
+true` measurement against the patched build. **Result: no change.** Same
+dim silhouette, same layout artifacts, pixel-for-pixel similar to the
+unpatched screenshot. This rules out `powerPreference` as the mechanism —
+a clean negative result, not a shrug. Reverted the change immediately
+(`git checkout -- src/components/hero-scene.tsx`) since it fixed nothing
+and shipping an unconfirmed, unhelpful change isn't worth the risk to a
+carefully-tuned file; re-verified `git status` clean and a fresh
+`npm run build` still passes after reverting.
+
+**Honest conclusion, unchanged from the thirty-first run's: still
+inconclusive, still not fixed, one hypothesis now eliminated.** The
+layout-artifact observation above nudges my own read further toward "sandbox
+emulation quirk" than "real device bug," but I'm not calling it closed on
+that alone — it's circumstantial, not a proof. No application code branches
+on `isMobile`/touch capability anywhere in the rendering path (confirmed
+again this run via the same grep the thirty-first run did), so there is
+still no code-level mechanism to fix even if I wanted to. Not spending
+further QA-loop cycles on speculative sandbox-side fixes for this: the
+concrete next step is unchanged from last run — a real phone or a
+non-software-rendered browser, which this environment doesn't have.
+
+**Did not attempt a browser pass beyond the mobile-glow investigation** —
+the thirty-first run already did a real desktop AR/EN pass and the codebase
+is unchanged since then; re-running the identical desktop checks would add
+no new information this hour.
+
+**Not touched this run, deliberately:** hero-delay (~7s) — still needs
+Aymean's creative-pacing call on intro duration, not another measurement.
+
+**Untouched, per standing rules:** `portfolio-data.ts` anonymization,
+pricing figures, About section (still deliberately empty).
+
+**Still open:** hero-delay (~7s, needs Aymean's call on intro duration); no
+live Active-Theory-style 3D-hero reference image exists for a further
+side-by-side; the mobile emitter-glow/sparkle visibility question — one
+hypothesis (`powerPreference`) now tested and ruled out, still needs a real
+device or non-software-rendered browser to settle (a) vs. (b) definitively.
+
+**STATUS: NOT YET READY TO DEPLOY.** No code changes shipped this run —
+build, lint, and spec spot-checks clean, no regressions, no new commits
+from anyone since the last entry. This run's time went to testing one
+concrete, falsifiable hypothesis on the standing mobile-glow question
+(ruled out cleanly, with a real before/after build) rather than re-treading
+already-audited ground or guessing blind. The two standing open items
+(hero-delay, mobile-glow) are both unchanged in substance, one of them now
+narrower in scope than before.
