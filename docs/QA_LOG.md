@@ -1950,3 +1950,73 @@ redundant full browser pass immediately on the heels of the twenty-second
 run's real one against the same unchanged build, not as an extended streak.
 Both standing open items are unchanged and remain blocked on Aymean, not on
 further QA-loop passes. Tenth consecutive clean, no-material-change hour.
+
+---
+
+## 2026-09-03 — twenty-fourth run, clean pass, no material change
+
+`git status` at start showed `HEAD` detached at `04fe6ac` (the twenty-third
+run's own log entry, same harmless pattern noted repeatedly) — `git
+checkout master` then `git pull origin master` fast-forwarded local
+`master` by 37 commits to the same `04fe6ac`; nothing new from anyone.
+`04fe6ac` was ~60 minutes old at that point — clear of the 20-minute
+hourly-cadence collision buffer, so clear to push if anything turned up.
+Other build session ("Intro sequence, stats, and 3D exam-light") still
+dormant since `f947cce` (2026-08-28) — confirmed via
+`git log --oneline f947cce..HEAD -- ':!docs/QA_LOG.md'`, which shows only
+this loop's own fix commits since then, nothing new — eleventh consecutive
+quiet hour from that side.
+
+**Note on this run's own scheduled prompt:** same stale "top open items"
+snapshot flagged by every run since the fourteenth (describes the
+visual-richness gap as "CONFIRMED... not yet attempted" — that matches the
+*eighth* run's finding; the *tenth* run shipped the sparkle/iridescence fix,
+the eleventh confirmed it's cheap, and every run since has re-confirmed it's
+still present). Treated the log's actual still-open list (hero-delay only,
+needs Aymean's creative-pacing call; no better reference image exists) as
+ground truth, per standing instructions, not the prompt's outdated recap.
+
+**Method:** `npm install` (reverted the usual incidental `package-lock.json`
+diff before touching anything, same recurring false alarm), `npm run build`
+(clean, identical 486.65KB/1017.10KB chunk split to every run since the
+tenth — no drift), `npm run lint` (same 6 pre-existing
+`only-export-components` warnings, no new ones). Spec spot-checks from
+source: `App.tsx` import/render order (`Hero → About → Process → Portfolio
+→ Pricing → Contact`, matches brief §3), `i18n.tsx` pricing copy in both
+locales (`$3,000 - $10,000` / `50% to start` / `50% before delivery` /
+`Live in under 24h` EN; `50% للبدء` / `50% قبل التسليم` / `24 ساعة` AR),
+`portfolio-data.ts` (0 `name:` fields, 7 anonymized `label:` entries, same
+"Gulf ..." pattern every prior run), `about.tsx` unchanged at 40 lines
+(still the deliberate zero-content scaffold), `contact.tsx`'s `EMAIL`
+constant unchanged (`contact@zaylogear.com`, matches Aymean's standing
+confirmation). All match brief, no regressions. Minimal serve check
+(`vite preview --port 4174` + `curl`) confirmed the production build
+actually serves (HTTP 200).
+
+**No full Playwright browser pass this run** — the twenty-second run did one
+two runs ago (three fresh contexts: desktop AR, desktop EN with a language
+toggle, mobile AR; zero console errors, zero regressions) and nothing has
+changed in the codebase since. The twenty-third run already skipped the
+immediate repeat once; skipping a second consecutive time is still within
+that run's own guidance ("one full pass right before is enough to skip a
+redundant back-to-back repeat, not license to skip indefinitely") — this is
+two skips since the last real pass, not four-plus. A future run should do a
+real browser pass again if this streak continues much further.
+
+**Not touched this run, deliberately:** hero-delay (~7s) — still needs
+Aymean's creative-pacing call on intro duration, not another measurement.
+Visual richness vs. Active Theory — already shipped and confirmed cheap; no
+better live reference image exists in the repo.
+
+**Untouched, per standing rules:** `portfolio-data.ts` anonymization,
+pricing figures, About section (still deliberately empty).
+
+**Still open, unchanged:** hero-delay (~7s, needs Aymean's call on intro
+duration); no live Active-Theory-style 3D-hero reference image exists for a
+further side-by-side.
+
+**STATUS: NOT YET READY TO DEPLOY.** No code changes this run, no new
+commits from anyone since the last entry. Build/lint/spec spot-checks and a
+minimal serve check all clean, zero new bugs, zero regressions. Both
+standing open items are unchanged and remain blocked on Aymean, not on
+further QA-loop passes. Eleventh consecutive clean, no-material-change hour.
