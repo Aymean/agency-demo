@@ -1301,3 +1301,69 @@ language toggle) all clean, zero new bugs. Also corrected a stale premise
 in this run's own scheduled-prompt text (see note above) rather than
 re-doing already-shipped work. Both standing open items are unchanged and
 still non-actionable by this loop for the reasons logged in prior entries.
+
+---
+
+## 2026-09-03 — fifteenth run, clean pass, no material change
+
+`git pull origin master` (run against a detached `HEAD` left over from a
+prior run, same harmless pattern the twelfth run's entry noted — `git
+checkout master` needed before `origin/master`'s 28 newer commits would
+fast-forward in locally). Landed at `2b992b9` (the fourteenth run's own log
+entry), ~57 minutes old at start — clear of the 20-minute hourly-cadence
+collision buffer. Other build session ("Intro sequence, stats, and 3D
+exam-light") still hasn't pushed since `f947cce` (2026-08-28) — nothing new
+to audit against the brief.
+
+**Note on this run's own scheduled prompt:** same stale snapshot the
+fourteenth run already flagged — the prompt's "top open items" text
+describes the visual-richness gap as unattempted, but that was fixed in
+the tenth run, confirmed cheap in the eleventh, and re-confirmed present in
+every run since. Treated the log's actual "still open" list (hero-delay
+only, plus no better reference image) as ground truth, per this loop's
+standing instructions.
+
+**Method:** `npm install` (reverted the incidental `package-lock.json`
+diff before touching anything, same recurring false alarm), `npm run
+build` (clean, identical 486.65KB/1017.10KB chunk split to every run since
+the tenth — no drift), `npm run lint` (same 6 pre-existing
+`only-export-components` warnings, no new ones). Spec spot-check from
+source: `App.tsx` section order (`Hero → About → Process → Portfolio →
+Pricing → Contact`), `i18n.tsx` pricing copy both locales (`$3,000 -
+$10,000` / `50% للبدء` / `50% قبل التسليم` / `24 ساعة`), `portfolio-data.ts`
+(0 `name:` fields, 7 real entries, all still anonymized "Gulf ..."
+pattern), `about.tsx` still the deliberate zero-content scaffold — all
+match brief, no regressions.
+
+**Live pass:** `npm install --no-save playwright` (no lockfile diff this
+time), served a production `vite preview` build, drove real Chromium
+(`/opt/pw-browsers/chromium`) with an 8s wait (past the intro) across
+desktop AR (1440×900), desktop EN, and mobile AR (390×844, `hasTouch`/
+`isMobile` flags set directly). Zero console/page errors in all three.
+`document.querySelectorAll('main > section')` confirms `top → about →
+process → work → pricing → contact` at runtime in every context; hero
+canvas present and rendering in all three. Screenshots of desktop AR and
+mobile AR confirm headline legibility (including over the lit emitter on
+mobile — ninth run's `DIM_ALPHA_COMPACT` fix still holding), sparkle field
+from the tenth run's richness fix visibly present, and the "+80" / "$0"
+stats reading correctly.
+
+**Not touched this run, deliberately:** hero-delay (~7s) — still needs
+Aymean's creative-pacing call on intro duration, not another measurement.
+Visual richness vs. Active Theory — already shipped and confirmed cheap;
+no better live reference image exists in the repo to compare against
+further.
+
+**Untouched, per standing rules:** `portfolio-data.ts` anonymization,
+pricing figures, About section (still deliberately empty).
+
+**Still open, unchanged:** hero-delay (~7s, needs Aymean's call on intro
+duration); no live Active-Theory-style 3D-hero reference image exists for
+a further side-by-side.
+
+**STATUS: NOT YET READY TO DEPLOY.** No code changes this run — build,
+lint, spec spot-checks, and a real-browser pass (desktop AR/EN, mobile AR)
+all clean, zero new bugs, zero regressions. Both standing open items are
+unchanged and still non-actionable by this loop for the reasons logged in
+prior entries — this was a legitimate quiet hour, verified rather than
+rubber-stamped.
