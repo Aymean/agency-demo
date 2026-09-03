@@ -1367,3 +1367,113 @@ all clean, zero new bugs, zero regressions. Both standing open items are
 unchanged and still non-actionable by this loop for the reasons logged in
 prior entries — this was a legitimate quiet hour, verified rather than
 rubber-stamped.
+
+---
+
+## 2026-09-03 — sixteenth run, chased a scary-looking mobile bug to ground, both closed clean
+
+`git pull origin master` — up to date at `9232b1a` (the fifteenth run's own
+log entry), ~57 minutes old at start — clear of the 20-minute hourly-cadence
+collision buffer. Other build session ("Intro sequence, stats, and 3D
+exam-light") still hasn't pushed since `f947cce` (2026-08-28).
+
+**Note on this run's own scheduled prompt:** same stale "top open items"
+snapshot the fourteenth/fifteenth runs already flagged (describes the
+visual-richness gap as unattempted — it was fixed in the tenth run,
+confirmed cheap in the eleventh, re-confirmed present in every run since).
+Treated the log's actual still-open list as ground truth, per standing
+instructions.
+
+**Method:** `npm install` (reverted the incidental `package-lock.json` diff,
+same recurring false alarm), `npm run build` (clean, identical
+486.65KB/1017.10KB chunk split to every run since the tenth), `npm run lint`
+(same 6 pre-existing warnings, no new ones). Spec spot-check from source:
+`App.tsx` section order, `i18n.tsx` pricing copy both locales,
+`portfolio-data.ts` (0 `name:` fields, 7 `label:` entries, still
+anonymized) — all match brief. `npm install --no-save playwright`, served a
+production `vite preview` build, drove real Chromium across desktop AR/EN
+(1440px) and mobile AR (390×844). Zero console errors, section order
+confirmed at runtime, hero canvas present in all three.
+
+**Chased down a real-looking bug, spent most of this run on it, concluded
+it's a false trail — writing up the method in full since it very nearly got
+logged as a regression:** a screenshot of the mobile hero (390px, plain
+viewport — no `devices['iPhone 13']` preset, no `isMobile`/`hasTouch`
+flags) appeared to show the second headline line's leading Arabic letter
+(the alef in "أفضل") clipped off — missing entirely at low zoom, looking
+exactly like a `text-wrap: balance` (Tailwind's `text-balance` class on
+`h1`) overflow bug clipped by the `TextReveal` wrapper's `overflow-hidden`.
+Before writing it up as a bug, went through the actual layout data rather
+than trusting the screenshot:
+- `h1` and its child spans' `getBoundingClientRect()`: consistently
+  `left: 24, right: 366` — fully inside the 390px viewport, no box-level
+  overflow.
+- `Range.getClientRects()` on the actual text nodes (the real glyph-run
+  geometry, not just the container box): line 2's text rect is
+  `left: 41.08, right: 348.92` — well inside the 366px wrapper, nowhere
+  near being clipped.
+- A tight 6x-zoomed crop of the screenshot at the exact coordinates in
+  question shows the alef's vertical stroke clearly present — it reads as
+  "missing" at low zoom only because a single thin vertical stroke against
+  a near-black background is easy to misperceive as a gap, not because
+  anything is actually cut off.
+
+**Conclusion: not a bug — a screenshot-legibility false trail**, closing it
+out here so a future run doesn't re-discover the same scare from a quick
+glance at a screenshot without zooming in on the actual pixels or checking
+`getClientRects()`. Flagging the general lesson: when a mobile Arabic
+screenshot looks like it's clipping a glyph, check the text node's own
+`getClientRects()` against the container box before concluding it's a
+layout bug — the box-level check alone isn't enough to either confirm or
+rule it out, since (as this run found) they can agree in a broken case too
+if you don't zoom into the actual render.
+
+**Second thing this same investigation surfaced, also chased to ground,
+also closed:** `document.documentElement.scrollWidth` measures **449px**
+against the **390px** viewport on mobile — a real, reproducible 59px
+discrepancy that holds even in a plain
+`newContext({ viewport: { width: 390, height: 844 } })` with zero
+emulation flags (i.e. not the eleventh run's already-documented
+`devices['iPhone 13']`-preset `innerWidth` artifact — this is a different,
+new-to-this-run measurement). Traced it: walking every element's real
+layout position (`offsetLeft`/`offsetWidth` chained through
+`offsetParent`, which is scroll-independent, unlike
+`getBoundingClientRect()`) and filtering to `position: static`/`relative`
+elements — the ones that can actually force document-level horizontal
+overflow — turned up **zero** offenders. The only elements extending past
+the viewport are `position: fixed`/`absolute` decorative layers
+(`grain-overlay`, and the glow `span`s behind buttons/badges, sized
+deliberately oversized — e.g. 690px/507px wide — so they don't reveal
+edges under their own subtle rotation/parallax). Confirmed this doesn't
+translate into any real user-facing horizontal scroll:
+`window.scrollBy({ left: 200 })` moved `scrollLeft` by only 1px, i.e. the
+page is not actually draggable/scrollable sideways despite the
+`scrollWidth` number. **Not a bug** — `scrollWidth` picking up
+fixed-position decorative elements' pre-transform box size is a known
+browser overflow-accounting quirk, with no visible or interactive
+consequence. Not fixed, because there's nothing to fix; logging the method
+so a future run that stumbles on the same `scrollWidth` number doesn't
+have to re-derive that it's harmless.
+
+**Not touched this run, deliberately:** hero-delay (~7s) — still needs
+Aymean's creative-pacing call on intro duration, not another measurement.
+Visual richness vs. Active Theory — already shipped and confirmed cheap; no
+better live reference image exists in the repo.
+
+**Untouched, per standing rules:** `portfolio-data.ts` anonymization,
+pricing figures, About section (still deliberately empty).
+
+**Still open, unchanged:** hero-delay (~7s, needs Aymean's call on intro
+duration); no live Active-Theory-style 3D-hero reference image exists for a
+further side-by-side.
+
+**STATUS: NOT YET READY TO DEPLOY.** No code changes this run. The bulk of
+this run's time went to a mobile-Arabic rendering scare that looked, at
+first glance, like a real clipping bug — worth it: chasing it with
+`getClientRects()`, scroll-independent offset math, and pixel-level crops
+(rather than either shipping a blind fix or leaving it as an unresolved
+flag) proved it out as two separate, now-closed false trails rather than a
+regression. Standard build/lint/spec checks and a real-browser pass across
+desktop AR/EN and mobile AR found nothing else. Both standing open items
+are unchanged and still non-actionable by this loop for the reasons logged
+in prior entries.
