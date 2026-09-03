@@ -2319,3 +2319,83 @@ minimal serve check all clean, zero new bugs, zero regressions. Both
 standing open items are unchanged and remain blocked on Aymean, not on
 further QA-loop passes. Fifteenth consecutive clean, no-material-change
 hour.
+
+---
+
+## 2026-09-03 — twenty-ninth run, real browser pass, clean
+
+`git pull origin master` — up to date at `da7d072` (the twenty-eighth
+run's own log entry), ~58 minutes old at start — clear of the 20-minute
+hourly-cadence collision buffer. Other build session ("Intro sequence,
+stats, and 3D exam-light") still dormant since `f947cce` (2026-08-28) —
+confirmed via `git log --oneline f947cce..HEAD -- ':!docs/QA_LOG.md'`,
+still exactly the same 10 fix commits — sixteenth consecutive quiet hour
+from that side.
+
+**Note on this run's own scheduled prompt:** the "top open items" recap it
+carries (visual-richness gap "CONFIRMED... not yet attempted") is the same
+stale snapshot every run since the fourteenth has flagged — the tenth run
+shipped the sparkle/iridescence fix, the eleventh confirmed it's cheap, and
+every run since (this one included) has re-confirmed it's present and
+unregressed. Treated the log's actual still-open list (hero-delay only,
+blocked on Aymean's creative-pacing call) as ground truth, not the
+prompt's recap.
+
+**Method:** `npm install` (the usual incidental `package-lock.json`
+`libc`-field diff appeared again, reverted before touching anything — same
+recurring false alarm every run hits). `npm run build` (clean, identical
+486.65KB/1017.10KB main/hero-scene chunk split to every run since the
+tenth — no drift). `npm run lint` (same 6 pre-existing
+`only-export-components` warnings, no new ones). Spec spot-checks from
+source: `App.tsx` render order (`Hero → About → Process → Portfolio →
+Pricing → Contact`, matches brief §3), `i18n.tsx` pricing copy in both
+locales (`$3,000 - $10,000` / `50% to start` / `50% before delivery` /
+`Live in under 24h` EN; `50% للبدء` / `50% قبل التسليم` / `24 ساعة` AR),
+`portfolio-data.ts` (0 `name:` fields, 8 `label:`-matching lines — 7 real
+entries plus the interface declaration, same count every prior run),
+`about.tsx` unchanged at 40 lines (deliberate zero-content scaffold),
+`contact.tsx`'s `EMAIL` unchanged (`contact@zaylogear.com`, matches
+Aymean's standing confirmation). All match brief, no regressions. Minimal
+serve check (`vite preview --port 4180/4181` + `curl`) confirmed the
+production build actually serves (HTTP 200).
+
+**Did a real browser pass this run** — the twenty-seventh run did the
+last one, the twenty-eighth used the one-skip allowance; per the
+established "one skip right after a real pass is fine, don't skip
+indefinitely" pattern, re-grounded in live verification rather than
+skipping a second time. `npm install --no-save playwright` (no lockfile
+diff), served the production build, drove real Chromium
+(`/opt/pw-browsers/chromium`) across two fresh contexts: desktop
+(1440×900, default locale, 8s wait) and mobile (390×844, real
+touch/mobile emulation, 8s wait) — site defaults to Arabic regardless of
+context locale, consistent with every prior run's "desktop AR / mobile
+AR" framing. Zero console/page errors in both.
+`document.querySelectorAll('main > section')` confirms `top → about →
+process → work → pricing → contact` at runtime in both. Hero canvas
+present (`canvasCount: 1`) in both. Screenshots reviewed directly: desktop
+shows the sparkle field (tenth run's richness fix) present around the
+object, headline legible, stats correct (`+80` / `$0`), nav order correct
+RTL; mobile shows the headline still legible over the lit emitter (ninth
+run's `DIM_ALPHA_COMPACT` fix holding, no camouflage). Mobile
+`scrollWidth` read 449 against the 390px viewport — same harmless
+fixed-position-decorative-element quirk the sixteenth run already
+root-caused and closed, not re-investigated further.
+
+**Not touched this run, deliberately:** hero-delay (~7s) — still needs
+Aymean's creative-pacing call on intro duration, not another measurement.
+Visual richness vs. Active Theory — already shipped and confirmed cheap; no
+better live reference image exists in the repo.
+
+**Untouched, per standing rules:** `portfolio-data.ts` anonymization,
+pricing figures, About section (still deliberately empty).
+
+**Still open, unchanged:** hero-delay (~7s, needs Aymean's call on intro
+duration); no live Active-Theory-style 3D-hero reference image exists for a
+further side-by-side.
+
+**STATUS: NOT YET READY TO DEPLOY.** No code changes this run, no new
+commits from anyone since the last entry. Build/lint/spec spot-checks
+clean, backed by a real browser pass (desktop, mobile) with zero console
+errors and zero regressions. Both standing open items are unchanged and
+remain blocked on Aymean, not on further QA-loop passes. Sixteenth
+consecutive clean, no-material-change hour.
