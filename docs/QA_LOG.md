@@ -1571,3 +1571,56 @@ build itself appears stable and everything within this loop's reach has
 been verified repeatedly. The two remaining items are genuinely blocked on
 Aymean (a creative-pacing call on intro duration, and a missing reference
 asset), not on further QA-loop passes.
+
+---
+
+## 2026-09-03 — eighteenth run, clean pass, no material change
+
+`git pull origin master` — already up to date at `54f7fe4` (the
+seventeenth run's own log entry), ~55 minutes old at start, clear of the
+20-minute hourly-cadence collision buffer. Other build session ("Intro
+sequence, stats, and 3D exam-light") still dormant since `f947cce`
+(2026-08-28) — no new commits from anyone since the last entry, so no
+audit-against-brief needed beyond a verification pass.
+
+**Note on this run's own scheduled prompt:** same stale "top open items"
+snapshot flagged by every run since the fourteenth (describes the
+visual-richness gap as unattempted — fixed tenth run, confirmed cheap
+eleventh, re-confirmed present every run since). Treated the log's actual
+still-open list (hero-delay only, needs Aymean's call; no better reference
+image) as ground truth, per standing instructions.
+
+**Method, lighter than a full browser pass given five straight clean runs
+with zero code changes in between:** `npm install` (reverted the usual
+incidental `package-lock.json` diff), `npm run build` (clean, identical
+486.65KB/1017.10KB chunk split), `npm run lint` (same 6 pre-existing
+`only-export-components` warnings, no new ones). Spec spot-checks from
+source: `App.tsx` section order (`Hero → About → Process → Portfolio →
+Pricing → Contact`, matches brief §3), `portfolio-data.ts` (0 `name:`
+fields, 8 `label:`-matching lines — 7 real entries plus the interface
+declaration, same count every prior run — still anonymized), pricing copy
+present in `i18n.tsx` (`$3,000 - $10,000` occurrences intact). No
+real-browser pass this run — five consecutive clean runs already verified
+runtime behavior repeatedly with zero code changes in between; re-running
+Playwright against an unchanged build wouldn't surface anything new.
+
+**Not touched this run, deliberately:** hero-delay (~7s) — still needs
+Aymean's creative-pacing call on intro duration, not another measurement.
+Visual richness vs. Active Theory — already shipped and confirmed cheap;
+no better live reference image exists in the repo.
+
+**Untouched, per standing rules:** `portfolio-data.ts` anonymization,
+pricing figures, About section (still deliberately empty).
+
+**Still open, unchanged:** hero-delay (~7s, needs Aymean's call on intro
+duration); no live Active-Theory-style 3D-hero reference image exists for
+a further side-by-side.
+
+**STATUS: NOT YET READY TO DEPLOY.** No code changes this run, no new
+commits from anyone since the last entry, build/lint/spec spot-checks all
+clean, zero new bugs, zero regressions. Both standing open items are
+unchanged and remain blocked on Aymean (a creative-pacing call, and a
+missing reference asset), not on further QA-loop passes. This is the fifth
+consecutive clean, no-material-change hour — flagging this pattern rather
+than repeating the same full audit indefinitely: everything within this
+loop's reach has been verified repeatedly and the build is stable.
