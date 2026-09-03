@@ -2020,3 +2020,91 @@ commits from anyone since the last entry. Build/lint/spec spot-checks and a
 minimal serve check all clean, zero new bugs, zero regressions. Both
 standing open items are unchanged and remain blocked on Aymean, not on
 further QA-loop passes. Eleventh consecutive clean, no-material-change hour.
+
+---
+
+## 2026-09-03 — twenty-fifth run, real browser pass after three skipped, still clean
+
+`git pull origin master` — up to date at `9b198bf` (the twenty-fourth run's
+own log entry), ~60 minutes old at start — clear of the 20-minute
+hourly-cadence collision buffer. Other build session ("Intro sequence,
+stats, and 3D exam-light") still dormant since `f947cce` (2026-08-28) —
+twelfth consecutive quiet hour from that side.
+
+**Note on this run's own scheduled prompt:** same stale "top open items"
+snapshot flagged by every run since the fourteenth (describes the
+visual-richness gap as "CONFIRMED... not yet attempted" — that matches the
+*eighth* run's finding; the *tenth* run shipped the sparkle/iridescence fix,
+the eleventh confirmed it's cheap, and every run since has re-confirmed it's
+still present). Treated the log's actual still-open list (hero-delay only,
+needs Aymean's creative-pacing call; no better reference image exists) as
+ground truth, per standing instructions, not the prompt's outdated recap.
+
+**Method:** `npm install` (the usual incidental `package-lock.json`
+`libc`-field diff appeared again, reverted before touching anything — first
+attempt hit a transient `ECONNRESET`, succeeded on retry, unrelated to the
+codebase). `npm run build` (clean, identical 486.65KB/1017.10KB chunk split
+to every run since the tenth — no drift). `npm run lint` (same 6
+pre-existing `only-export-components` warnings, no new ones). Spec
+spot-checks from source: `App.tsx` import/render order (`Hero → About →
+Process → Portfolio → Pricing → Contact`, matches brief §3), `i18n.tsx`
+pricing copy in both locales (`$3,000 - $10,000` / `50% to start` / `50%
+before delivery` / `Live in under 24h` EN; `50% للبدء` / `50% قبل التسليم` /
+`24 ساعة` AR), `portfolio-data.ts` (0 `name:` fields, 8 `label:`-matching
+lines — 7 real entries plus the interface declaration, same count every
+prior run), `about.tsx` unchanged at 40 lines (deliberate zero-content
+scaffold), `contact.tsx`'s `EMAIL` unchanged (`contact@zaylogear.com`,
+matches Aymean's standing confirmation). All match brief, no regressions.
+
+**Did a real browser pass this run, deliberately, rather than extending the
+skip streak further.** The twenty-second run did the last full Playwright
+pass; the twenty-third and twenty-fourth both skipped it on that run's own
+"don't skip indefinitely" guidance, reasoning one skip each was fine. Three
+runs since the last real pass (counting this one, it would have been three
+skips in a row) is far enough past that threshold to be worth re-grounding
+in live verification. `npm install --no-save playwright` (no lockfile diff
+this time), served a production `vite preview` build (`curl` confirmed HTTP
+200), drove real Chromium (`/opt/pw-browsers/chromium`) across three fresh
+contexts: desktop AR (default, 1440×900, 8s wait), desktop EN with a
+mid-load language toggle (~6.5s in, past the intro's pointer-capture window
+per the twelfth run's note), and mobile AR (390×844, `hasTouch`/`isMobile`
+set directly, not the `devices['iPhone 13']` preset, per the eleventh run's
+note on that preset's `innerWidth` artifact).
+
+**Results — zero console/page errors in all three contexts.**
+`document.querySelectorAll('main > section')` confirms `top → about →
+process → work → pricing → contact` at runtime, matching source. Hero
+canvas present (`canvasCount: 1`) in all three. Screenshots reviewed
+directly: AR desktop shows the sparkle field from the tenth run's richness
+fix clearly present around the object, headline legible, stats correct
+(`+80` / `$0`); mobile AR shows the headline still legible over the lit
+emitter (ninth run's `DIM_ALPHA_COMPACT` fix holding, no clipping on the
+Arabic glyphs — sixteenth run's false-trail concern doesn't reproduce here
+either); EN desktop after the toggle shows correct nav order
+(Process/Work/Pricing/Contact), confirming the toggle actually landed on EN
+content. Mobile `scrollWidth` read 449 against the 390px viewport — the
+same harmless fixed-position-decorative-element quirk the sixteenth run
+already root-caused and closed (no interactive horizontal scroll), not
+re-investigated further.
+
+**Not touched this run, deliberately:** hero-delay (~7s) — still needs
+Aymean's creative-pacing call on intro duration, not another measurement.
+Visual richness vs. Active Theory — already shipped and confirmed cheap; no
+better live reference image exists in the repo.
+
+**Untouched, per standing rules:** `portfolio-data.ts` anonymization,
+pricing figures, About section (still deliberately empty).
+
+**Still open, unchanged:** hero-delay (~7s, needs Aymean's call on intro
+duration); no live Active-Theory-style 3D-hero reference image exists for a
+further side-by-side.
+
+**STATUS: NOT YET READY TO DEPLOY.** No code changes this run, no new
+commits from anyone since the last entry. Build/lint/spec spot-checks clean,
+and — unlike the previous three entries — backed by an actual real-browser
+pass this time (desktop AR/EN with a language toggle, mobile AR), which
+found zero console errors and zero regressions across all three. Both
+standing open items are unchanged and remain blocked on Aymean, not on
+further QA-loop passes. Twelfth consecutive clean, no-material-change hour,
+re-grounded in live verification rather than extending the lighter
+source-only method further.
