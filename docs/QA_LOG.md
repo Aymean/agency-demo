@@ -2108,3 +2108,71 @@ standing open items are unchanged and remain blocked on Aymean, not on
 further QA-loop passes. Twelfth consecutive clean, no-material-change hour,
 re-grounded in live verification rather than extending the lighter
 source-only method further.
+
+---
+
+## 2026-09-03 — twenty-sixth run, clean pass, no material change
+
+`git pull origin master` — up to date at `6dd4dd8` (the twenty-fifth run's
+own log entry), ~57 minutes old at start — clear of the 20-minute
+hourly-cadence collision buffer. Other build session ("Intro sequence,
+stats, and 3D exam-light") still dormant since `f947cce` (2026-08-28) —
+confirmed via `git log --oneline f947cce..HEAD -- ':!docs/QA_LOG.md'`, which
+shows only this loop's own fix commits since then — thirteenth consecutive
+quiet hour from that side.
+
+**Note on this run's own scheduled prompt:** the "top open items" recap it
+carries (visual-richness gap "CONFIRMED... not yet attempted") is the same
+stale snapshot every run since the fourteenth has flagged — it matches the
+*eighth* run's finding, but the *tenth* run shipped the sparkle/iridescence
+fix, the eleventh confirmed it's cheap, and every run since (this one
+included) has re-confirmed it's still present and unregressed. Per standing
+instructions, treated the log's actual still-open list (hero-delay only,
+blocked on Aymean's creative-pacing call) as ground truth, not the prompt's
+recap.
+
+**Method:** `npm install` (the usual incidental `package-lock.json`
+`libc`-field diff appeared again, reverted before touching anything — same
+recurring false alarm every run hits). `npm run build` (clean, identical
+486.65KB/1017.10KB main/hero-scene chunk split to every run since the
+tenth — no drift). `npm run lint` (same 6 pre-existing
+`only-export-components` warnings, no new ones). Spec spot-checks from
+source: `App.tsx` import/render order (`Hero → About → Process → Portfolio
+→ Pricing → Contact`, matches brief §3), `i18n.tsx` pricing copy in both
+locales (`$3,000 - $10,000` / `50% to start` / `50% before delivery` /
+`Live in under 24h` EN; `50% للبدء` / `50% قبل التسليم` / `24 ساعة` AR),
+`portfolio-data.ts` (0 `name:` fields, 8 `label:`-matching lines — 7 real
+entries plus the interface declaration, same count every prior run),
+`about.tsx` unchanged at 40 lines (deliberate zero-content scaffold),
+`contact.tsx`'s `EMAIL` unchanged (`contact@zaylogear.com`, matches
+Aymean's standing confirmation). All match brief, no regressions. Minimal
+serve check (`vite preview --port 4175` + `curl`) confirmed the production
+build actually serves (HTTP 200).
+
+**No full Playwright browser pass this run** — the twenty-fifth run did one
+last hour (desktop AR, desktop EN with a language toggle, mobile AR; zero
+console errors, zero regressions) against this exact unchanged build.
+Following the established "one skip right after a real pass is fine, don't
+skip indefinitely" pattern from runs twenty-three/twenty-four: this is the
+first skip since that real pass, not an extended streak. A future run
+should do a real browser pass again if the codebase stays unchanged for
+several more hours.
+
+**Not touched this run, deliberately:** hero-delay (~7s) — still needs
+Aymean's creative-pacing call on intro duration, not another measurement.
+Visual richness vs. Active Theory — already shipped and confirmed cheap; no
+better live reference image exists in the repo.
+
+**Untouched, per standing rules:** `portfolio-data.ts` anonymization,
+pricing figures, About section (still deliberately empty).
+
+**Still open, unchanged:** hero-delay (~7s, needs Aymean's call on intro
+duration); no live Active-Theory-style 3D-hero reference image exists for a
+further side-by-side.
+
+**STATUS: NOT YET READY TO DEPLOY.** No code changes this run, no new
+commits from anyone since the last entry. Build/lint/spec spot-checks and a
+minimal serve check all clean, zero new bugs, zero regressions. Both
+standing open items are unchanged and remain blocked on Aymean, not on
+further QA-loop passes. Thirteenth consecutive clean, no-material-change
+hour.
