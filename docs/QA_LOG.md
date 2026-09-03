@@ -1239,3 +1239,65 @@ QA-loop measurement wouldn't add anything: hero-delay needs Aymean's
 creative-pacing call, and the richness fix has no better reference image
 to compare against. Legitimate no-material-change run, not a rubber
 stamp — verified via build, lint, and a live pass rather than skipped.
+
+---
+
+## 2026-09-03 — fourteenth run, clean pass, no material change
+
+`git pull` — up to date at `5e75e91` (the thirteenth run's own log entry),
+~56 minutes old at start — clear of the 20-minute hourly-cadence collision
+buffer. Other build session ("Intro sequence, stats, and 3D exam-light")
+still hasn't pushed since `f947cce` (2026-08-28) — nothing new to audit
+against the brief.
+
+**Note on this run's own scheduled prompt:** the prompt's "current top open
+items" snapshot describes the visual-richness gap as "CONFIRMED... not yet
+attempted." That's stale — it matches the *eighth* run's finding, but the
+*tenth* run already shipped the sparkle/iridescence fix, the eleventh run
+confirmed it's cheap (+1 WebGL program, no hero-delay impact), and the
+twelfth/thirteenth runs re-confirmed it's still visibly present. Per this
+loop's own instructions to prioritize the QA_LOG's actual "still open" list
+over any stale snapshot, treated the log (not the prompt's outdated
+recap) as ground truth this run.
+
+**Method:** `npm install` (reverted the incidental `package-lock.json`
+diff before touching anything, same recurring false alarm), `npm run
+build` (clean, identical 486.65KB/1017.10KB chunk split to every run since
+the tenth — no drift), `npm run lint` (same 6 pre-existing
+`only-export-components` warnings, no new ones). Spec spot-check from
+source: `App.tsx` section order (`Hero → About → Process → Portfolio →
+Pricing → Contact`), `i18n.tsx` pricing copy both locales (`$3,000 -
+$10,000` / `50% للبدء` / `50% قبل التسليم` / `24 ساعة`), `portfolio-data.ts`
+(0 `name:` fields, 7 `label:` entries, all still anonymized "Gulf ..."
+pattern) — all match brief, no regressions.
+
+**Live pass:** `npm install --no-save playwright` (no lockfile diff this
+time), served a production `vite preview` build, drove real Chromium
+(`/opt/pw-browsers/chromium`) on desktop AR (default) and desktop EN with
+a mid-load language toggle (~6.5s in, past the intro's pointer-capture
+window per the twelfth run's own note on that timing trap). Zero
+console/page errors in both. `document.querySelectorAll('main > section')`
+confirms `top → about → process → work → pricing → contact` at runtime in
+both passes. Hero canvas present and rendering after the wait in both;
+screenshot confirms sparkle field and headline legibility both intact,
+stats read `+80` / `$0` correctly in AR.
+
+**Not touched this run, deliberately:** hero-delay (~7s) — still needs
+Aymean's creative-pacing call on intro duration, not another measurement.
+Visual richness vs. Active Theory — already shipped and confirmed cheap;
+no better live reference image exists in the repo to compare against
+further.
+
+**Untouched, per standing rules:** `portfolio-data.ts` anonymization,
+pricing figures, About section (still deliberately empty).
+
+**Still open, unchanged:** hero-delay (~7s, needs Aymean's call on intro
+duration); no live Active-Theory-style 3D-hero reference image exists for
+a further side-by-side.
+
+**STATUS: NOT YET READY TO DEPLOY.** No code changes this run — build,
+lint, spec spot-checks, and a real-browser pass (desktop AR/EN, mid-load
+language toggle) all clean, zero new bugs. Also corrected a stale premise
+in this run's own scheduled-prompt text (see note above) rather than
+re-doing already-shipped work. Both standing open items are unchanged and
+still non-actionable by this loop for the reasons logged in prior entries.
