@@ -112,8 +112,14 @@ export function Reveal({
     <motion.div
       key={dir}
       // `relative` only when the glow needs a containing block, so no existing
-      // caller silently gains a new positioning context.
-      className={cn(lock && 'relative', className)}
+      // caller silently gains a new positioning context. `overflow-hidden`
+      // rides along with it: LockGlow is deliberately oversized (130%/160% of
+      // this box) to bleed softly past its own text, and with nothing to clip
+      // it that bleed becomes real page-level horizontal overflow on narrow
+      // viewports — confirmed on mobile, where it inflated the fixed header's
+      // own width past the viewport and pushed the language toggle (the only
+      // way to switch languages below the `md` nav breakpoint) off-screen.
+      className={cn(lock && 'relative overflow-hidden', className)}
       initial="hidden"
       whileInView="show"
       viewport={VIEWPORT}

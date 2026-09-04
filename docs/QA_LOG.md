@@ -2719,3 +2719,153 @@ concrete, falsifiable hypothesis on the standing mobile-glow question
 already-audited ground or guessing blind. The two standing open items
 (hero-delay, mobile-glow) are both unchanged in substance, one of them now
 narrower in scope than before.
+
+---
+
+## 2026-09-04 — thirty-third run, resumed after an account interruption; found and fixed a real mobile-RTL layout bug and a phone-number bidi bug, flagged a new portfolio/niche mismatch
+
+**Resuming after a gap.** Last commit (`e22d436`, the thirty-second run's
+own entry) was ~21h old at start — well clear of the 45-minute collision
+window. No other session has touched the repo since; same quiet state the
+last several runs have reported.
+
+**Method:** `npm install` (usual incidental `package-lock.json` `libc`-field
+diff, reverted before touching anything). `npm run build` (clean, same
+486.65KB/1017.10KB chunk split as every run since the tenth, before this
+run's own fixes). `npm run lint` (same 6 pre-existing
+`only-export-components` warnings, no new ones). Then a real Playwright
+pass against `vite preview` — Chromium, desktop (1440×900) and mobile
+(390×844, `isMobile`/`hasTouch` set directly, deviceScaleFactor 2, per the
+eleventh run's note on the `devices['iPhone 13']` preset's own artifacts) —
+hero, about, process, work, pricing, contact, both languages, with the
+language toggled mid-session rather than two separate loads. Zero
+console/page errors across every capture, both before and after this run's
+fixes.
+
+**Found and fixed two real bugs, both invisible from source, both only
+caught by actually rendering and interacting with the page per the
+standing method:**
+
+1. **Mobile language toggle was functionally unreachable — the only way to
+   switch EN/AR on a phone, since the nav's text links are `md:flex`-gated
+   off.** Screenshotting the mobile hero showed a header with nothing in it
+   but the logo mark — no toggle, no CTA, and (more visibly, since pricing
+   and contact scroll past the header) body copy clipped hard against the
+   right edge of the viewport on every section below the fold. Measured
+   directly: `document.documentElement.scrollWidth` was 449 against a
+   390px `clientWidth` — real horizontal overflow, not a screenshot timing
+   artifact. Traced it past a red herring (uniform +57px shift on every
+   *unfixed* element, consistent with a horizontal-scroll side effect) to
+   the actual root cause: `reveal.tsx`'s `LockGlow`, the "faint glow-on-lock
+   echo" behind section headings (`REBUILD_BRIEF.md` §2's confirmed
+   section-transition motif), is deliberately oversized — `w-[130%]
+   h-[160%]` of its own container, meant to bleed softly past the heading
+   text — but the `Reveal lock` wrapper that hosts it only ever gained
+   `position: relative`, never anything to clip that bleed. Unclipped, the
+   glow's real layout box (not just its visual paint) pushed the whole
+   page 59px wider than the viewport on the four sections that use
+   `Reveal lock` on mobile widths (Process/Work/Pricing/Contact — Hero
+   doesn't use `lock` and was never affected). That page-level overflow
+   then fed into `position: fixed; inset-x-0` sizing for the header
+   (confirmed directly: force-setting `header.style.width = '390px'
+   !important` collapsed it back to the viewport instantly, with no other
+   change), inflating the header to 448px and shoving the language toggle
+   almost entirely off-screen to the left (`left: -34px` of its own 42px
+   width — only an 8px sliver was ever technically on-screen). **Fix:**
+   `reveal.tsx` — `lock && 'relative'` → `lock && 'relative
+   overflow-hidden'`, scoped to exactly the wrapper that hosts `LockGlow`,
+   touching nothing else. Rebuilt, re-measured: `scrollWidth` dropped from
+   449→398 (an 8px residual remains — see "Left open" below), and directly
+   confirmed via `getBoundingClientRect()` + an actual `.click()` in
+   Playwright that the toggle is now fully on-screen (`left: 16px`, full
+   42px width visible) and functionally switches the language. Re-ran the
+   full screenshot pass after the fix: no clipping regression on any of
+   the four affected sections' headings on desktop or mobile, lint and
+   build both still clean.
+
+2. **WhatsApp phone number displayed digit-group-reversed in Arabic.**
+   `contact.tsx` renders `+966 57 351 3946` as a bare text node inside an
+   RTL-context `<a>`. A run of space-separated number groups with no
+   strong-RTL character of its own takes its embedding direction from the
+   surrounding paragraph under the Unicode Bidi Algorithm — each group's
+   own digits stay in order, but the groups themselves reorder
+   last-first, so it rendered as `3946 351 57 966+`. This is the exact
+   failure mode the codebase already has an established, working fix for
+   in two other places — `site-nav.tsx`'s brand wordmark and `hero.tsx`'s
+   "$0" seal both wrap the LTR text in `<span dir="ltr">`, with a comment
+   at the nav site explaining why. The contact section's phone number was
+   just missed when that pattern was applied elsewhere. **Fix:** wrapped
+   `{WHATSAPP_DISPLAY}` in `<span dir="ltr">`, matching the existing
+   convention exactly. Verified in a fresh screenshot: reads correctly as
+   `+966 57 351 3946` in both the mobile and desktop Arabic captures now.
+   Email address was never affected (a single contiguous string is one
+   bidi run, nothing to reorder) and needed no change.
+
+Both fixes committed directly to master per the standing instructions
+(real bugs, verified with real before/after measurements and screenshots,
+not source-reading alone).
+
+**New, unresolved — flagging rather than fixing unilaterally:** the
+portfolio/"Work" section's vertical mix doesn't match the site's own
+confirmed niche. `portfolio-data.ts` has 7 entries; only 3 are clinics
+(two dental, one aesthetic) and the other 4 are an architecture studio, an
+interior-design studio, and two real-estate businesses — leftover from
+what `REBUILD_BRIEF.md` §5 describes as the old, broader vertical set
+("dental, aesthetic, real estate, interior design") that the niche
+redefinition to "all clinic types in Saudi Arabia" was supposed to
+retire. Every other section's copy already reflects the clinic-only
+positioning (hero: "Clinics of every kind — Saudi Arabia" / "We find
+clinics running on a broken, outdated, or dead website"; pricing:
+"pages, languages, booking, the things only your clinic needs"), but the
+primary trust/social-proof section a visitor scrolls to next is
+majority (4 of 7) non-clinic work. I didn't reorder or trim
+`portfolio-data.ts` myself: unlike the two bugs above, this isn't a
+rendering defect with one unambiguous correct state — it's a real content
+question (is a broader portfolio a deliberate range-of-capability signal,
+or stale content that should be replaced/reordered/trimmed to lead with
+clinic work?) that reads as exactly the kind of business-positioning call
+this loop has consistently kicked to Aymean rather than deciding
+unilaterally (see hero-delay, below). No prior run in 32 passes flagged
+this — worth a real look next time Aymean's available, not something a
+future run of this loop should keep re-noticing without deciding.
+
+**Left open, not chased further:** an 8px residual horizontal overflow
+remains after the `LockGlow` fix (`scrollWidth` 398 vs `clientWidth`
+390) — down from 59px, and confirmed to have no remaining visible or
+functional impact (language toggle and every section's text render fully
+on-screen, verified above). Spent a little time isolating it — it is not
+`grain-overlay` (removing it live in the page left `scrollWidth`
+unchanged, tested the same way the fifty-nine-px version was ruled out
+against that element) and every remaining flagged element in a fresh
+overflow scan showed only the same uniform residual shift, not a distinct
+new offender the way `LockGlow` stood out before. Didn't chase it to a
+named element given the confirmed lack of visible impact — a candidate for
+a future run if it ever turns out to matter (e.g. if a future change
+removes whatever is currently absorbing it and the residual grows).
+
+**Not touched this run, deliberately:** hero-delay (~7s) — still needs
+Aymean's creative-pacing call on intro duration, not another measurement.
+Mobile emitter-glow/sparkle question — still blocked on a real device or
+non-software-rendered browser, no new angle this run.
+
+**Untouched, per standing rules:** `portfolio-data.ts` anonymization (still
+fully anonymized, confirmed again while investigating the niche-mix
+question above — no real client names anywhere, all 7 image pairs present
+in `public/portfolio/`), pricing figures ($3,000-$10,000 / 50% / 50% /
+<24h, both languages, confirmed via screenshot this run), About section
+(still deliberately empty), contact@zaylogear.com (confirmed correct,
+unchanged).
+
+**STATUS: NOT YET READY TO DEPLOY.** Two real, verified bugs fixed and
+pushed this run — a mobile layout bug that made the language toggle
+unreachable on phones (likely the single most impactful fix to date for
+actual mobile visitors, given it affected every mobile session in the
+site's default language), and a phone-number bidi rendering bug. Build,
+lint, and a full bilingual desktop+mobile screenshot pass are all clean
+post-fix, no regressions found. One new, unresolved item needs Aymean's
+input (portfolio vertical mix vs. the confirmed clinic-only niche) and two
+items remain blocked exactly as before (hero-delay on Aymean's pacing
+call, mobile-glow on real-device access) — not deploy-blocking gaps by
+themselves, but real work remains before this is a finished site, and the
+portfolio mismatch in particular is worth Aymean's eyes soon since it sits
+in the primary trust-building section of the page.

@@ -56,7 +56,14 @@ export function Contact() {
             className="flex items-center justify-center gap-2 text-muted-foreground transition-colors hover:text-foreground"
           >
             <MessageCircle className="size-4" />
-            {WHATSAPP_DISPLAY}
+            {/* Dir-locked for the same reason as the nav wordmark and the
+                hero's "$0" seal: a run of digit groups with no strong-RTL
+                characters of its own takes the paragraph's embedding
+                direction, so in an RTL context the space-separated groups
+                reorder (last group first) even though each group's own
+                digits stay correct — "+966 57 351 3946" was rendering as
+                "3946 351 57 966+". */}
+            <span dir="ltr">{WHATSAPP_DISPLAY}</span>
           </a>
         </div>
       </Reveal>
