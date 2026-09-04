@@ -2869,3 +2869,107 @@ call, mobile-glow on real-device access) — not deploy-blocking gaps by
 themselves, but real work remains before this is a finished site, and the
 portfolio mismatch in particular is worth Aymean's eyes soon since it sits
 in the primary trust-building section of the page.
+
+---
+
+## 2026-09-04 — thirty-fourth run, audit-only; both prior open items resolved by Aymean directly, no new bugs found
+
+`git pull origin master` — up to date at `f904af4`, ~77 minutes old at
+start (`git log -1 --format=%cI` → `2026-09-04T18:58:19+02:00` vs.
+`date -u` → `2026-09-04T18:15:39Z`) — clear of the 45-minute collision
+window.
+
+**Two commits landed since the thirty-third run's entry, neither logged
+here yet — checked both before doing anything else, since one touches the
+standing "don't unilaterally retime the intro" rule:**
+
+1. `cbfc4a8` "Compress intro sequence from ~5.6s to ~3.0s" — authored by
+   Aymen Magrez (`Aymean`, verified via `git log --format='%an <%ae>'`, not
+   this loop's own commits), commit message states explicitly "Aymean's
+   explicit call" and scales every `intro-sequence.tsx` timing constant by
+   ~0.54 to preserve relative pacing. **This is the hero-delay item
+   resolved by Aymean himself, directly — not a QA-loop decision, and not
+   a violation of the standing "blocked-on-Aymean, don't retime
+   unilaterally" rule**, since the rule was about this loop deciding, not
+   about Aymean deciding. Closing this item.
+2. `f904af4` "Drop non-clinic portfolio items to match the site's
+   clinic-only niche" — same author, same explicit-call framing, removes
+   the 4 non-clinic `portfolio-data.ts` entries (arcave, icondesign,
+   gravity, urbannest) the thirty-third run flagged, leaving the 3 clinic
+   entries (greendent, bently, lavida). **This is the portfolio-mismatch
+   item flagged last run, now resolved by Aymean.** Closing this item too.
+
+**Method:** `npm install` (usual incidental `package-lock.json`
+`libc`-field diff, reverted after). `npm run build` (clean, identical
+486.65KB/1017.10KB main/hero-scene chunk split). `npm run lint` (same 6
+pre-existing `only-export-components` warnings, no new ones). Real
+Playwright pass (`/opt/pw-browsers/chromium-1194`, executablePath pinned
+directly since the installed `playwright` npm package's default expected
+build number didn't match what's on disk) against a production `vite
+preview` build — fresh incognito contexts, desktop 1440px and mobile
+390×844 with `isMobile`/`hasTouch` set directly (per the eleventh run's
+note on `devices['iPhone 13']` artifacts), EN/AR via the in-page toggle,
+hero/about/process/work/pricing/contact. Zero console/page errors in every
+capture.
+
+**Verified both fixes are real and undamaged, not just present in the
+diff:**
+- Hero screenshot at ~5s wall-clock from a fresh load already shows the
+  fully-resolved exam-light object with sparkles, both languages, desktop
+  and mobile — a dramatic change from the ~7–7.5s-to-visible baseline every
+  run from the third through the thirty-second measured. Did not
+  re-instrument exact millisecond timing (a screenshot-based visual
+  confirmation is sufficient to confirm the qualitative claim in the
+  commit message; precise re-timing would just reproduce Aymean's own
+  stated arithmetic).
+- Work section renders exactly 3 cards (dental, dental, aesthetic, all
+  clinic-relevant), grid layout intact, no empty gaps or leftover styling
+  artifacts from the 4 removed entries, real screenshot images load
+  correctly in both languages.
+
+**Spec re-check, no regressions:** section order, pricing copy both
+locales (`$3,000 - $10,000` / `50% to start` / `50% before delivery` /
+`Live in under 24h`), `contact.tsx` EMAIL unchanged
+(`contact@zaylogear.com`), WhatsApp number still displays correctly
+left-to-right in Arabic (`+966 57 351 3946`, the thirty-third run's bidi
+fix holds), mobile language toggle still fully on-screen and clickable
+(the thirty-third run's `LockGlow overflow-hidden` fix holds — `scrollWidth`
+398 vs `clientWidth` 390 mobile AR, same 8px residual as documented last
+run, not regressed), About section still deliberately empty.
+
+**New observation, not a bug, flagging for whenever Aymean next looks at
+this:** the Work section's copy still reads "80+ rebuilds. Real clinics.
+Real problems fixed." above a grid of exactly 3 case-study cards. That
+copy/count gap existed before too (7 cards vs. "80+"), but 3 cards
+reads noticeably thinner as social proof than 7 did. Not reverting or
+second-guessing Aymean's own trim — the niche-mismatch problem it fixed
+was real and worse than this — just noting that if Aymean has more
+real, anonymizable clinic work to add, this section has room for it now
+that the non-clinic padding is gone.
+
+**Not touched this run, deliberately:** mobile emitter-glow/sparkle
+question — still blocked on a real device or non-software-rendered
+browser (per the thirty-first/thirty-second runs' isolation work), no new
+angle this run.
+
+**Untouched, per standing rules:** `portfolio-data.ts` anonymization (all
+3 remaining entries confirmed anonymized, no real client names), pricing
+figures, About section (still deliberately empty, correct).
+
+**No code changes this run** — both items this loop had flagged as open
+were resolved by Aymean directly between runs, and a full build/lint/
+browser pass found no new regressions or bugs to fix. A clean no-op pass
+on the code side, but a substantive one on bookkeeping: two long-standing
+open items are now closed.
+
+**STATUS: NOT YET READY TO DEPLOY**, but closer than any prior entry.
+Both items this log had flagged as blocking further confidence
+(hero-delay, portfolio/niche mismatch) are now resolved, by Aymean
+directly. Remaining open items: the mobile-only hero-glow rendering gap
+(still needs real hardware, unchanged blocker), and the new soft
+observation above (3 portfolio cards vs. "80+" copy — not a defect, a
+content-richness opportunity). No console errors, no spec regressions, no
+fabricated content anywhere. If Aymean is satisfied with 3 portfolio
+case studies and accepts the mobile-glow gap as a known, real-device-only
+unknown, there may not be much left to block a deploy decision on
+craft/QA grounds — that call is still his to make, not this loop's.
