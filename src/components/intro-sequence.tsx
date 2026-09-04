@@ -28,37 +28,34 @@ const BURST_EASE = [0.6, 0, 0.85, 0.2] as const
 
 // A held beat of empty ground before anything moves. Cheap, and it stops the
 // first piece from appearing to already be in flight when the page paints.
-const START_DELAY = 0.25
-const ASSEMBLE_STAGGER = 0.3
-const ASSEMBLE_DURATION = 1.4
-// Last piece lands here: 0.25 + (2 x 0.3) + 1.4. Lands inside the brief's
-// 2-2.5s window for the whole assemble.
+//
+// 2026-09-04: Aymean's explicit call — whole sequence compressed from ~5.6s to
+// ~3.0s (was costing first-visit content visibility, his words: "people can't
+// see it once they load"). Every constant below is the original scaled by
+// ~0.54, keeping the same relative pacing rather than cutting a phase outright.
+const START_DELAY = 0.15
+const ASSEMBLE_STAGGER = 0.16
+const ASSEMBLE_DURATION = 0.75
+// Last piece lands here: 0.15 + (2 x 0.16) + 0.75 = 1.22s.
 const ASSEMBLE_END = START_DELAY + ASSEMBLE_STAGGER * (LOGO_PIECES.length - 1) + ASSEMBLE_DURATION
 
-const GLOW_DURATION = 0.65
-const HOLD_DURATION = 1.15
+const GLOW_DURATION = 0.35
+const HOLD_DURATION = 0.6
 const BURST_AT = ASSEMBLE_END + GLOW_DURATION + HOLD_DURATION
 
-const BURST_STAGGER = 0.09
-const BURST_DURATION = 1.15
+const BURST_STAGGER = 0.05
+const BURST_DURATION = 0.6
 const BURST_SCALE = 4
 
 // Late in the burst, not at its end — the overlay's fade and the site's
-// arrival are meant to overlap. It can't be much earlier than this: BURST_EASE
-// is heavily back-loaded (at 60% of its duration a piece has only travelled
-// ~20% of the way to 4x), so pulling the overlay at, say, +0.7s would cut the
-// whole sequence off while the pieces still looked stationary. At +0.85 the
-// acceleration has visibly happened, and FADE_OUT then carries past the
-// transition's own 1.15s end.
-// The last piece's burst ends at (2 x BURST_STAGGER) + BURST_DURATION = 1.33s,
-// and the overlay is gone at RESOLVE_AT + FADE_OUT = 1.50s. That ~0.17s of
-// headroom is deliberate: setTimeout is wall-clock but Motion's transitions are
-// frame-driven, so on a device dropping frames the timers keep their schedule
-// while the animation falls behind. Measured with a software renderer, too
-// little margin here pulls the overlay mid-burst and the pieces are cut off
-// around 2.7x instead of reaching 4x.
-const RESOLVE_AT = BURST_AT + 0.95
-const FADE_OUT = 0.55
+// arrival are meant to overlap. Same ~71%-through-the-burst fraction as the
+// original timing (BURST_AT + 0.95 out of a 1.33s burst tail), rescaled here
+// to BURST_AT + 0.5 out of a 0.7s tail. setTimeout is wall-clock but Motion's
+// transitions are frame-driven, so a small headroom margin still matters on a
+// device dropping frames — kept proportionally rather than at the old
+// absolute value.
+const RESOLVE_AT = BURST_AT + 0.5
+const FADE_OUT = 0.3
 
 /* Scatter origins, in SVG user units (the viewBox is 500 wide, so these are
    several multiples of the mark's own size — far enough to clear the viewport
@@ -128,10 +125,10 @@ export function IntroSequence({ onResolve, onComplete }: { onResolve: () => void
     return () => timers.forEach(clearTimeout)
   }, [started, onResolve, onComplete])
 
-  // Skip affordance. Nearly six seconds is a long time to hold someone's
-  // first visit hostage, so any deliberate input jumps straight to the
-  // resolved state. Scroll/touch are included because they're the reflex of
-  // someone who wants the page, not the show.
+  // Skip affordance. Even at ~3s, holding someone's first visit hostage is
+  // worth letting them opt out of, so any deliberate input jumps straight to
+  // the resolved state. Scroll/touch are included because they're the reflex
+  // of someone who wants the page, not the show.
   useEffect(() => {
     function skip() {
       if (finished.current) return
