@@ -2973,3 +2973,103 @@ fabricated content anywhere. If Aymean is satisfied with 3 portfolio
 case studies and accepts the mobile-glow gap as a known, real-device-only
 unknown, there may not be much left to block a deploy decision on
 craft/QA grounds — that call is still his to make, not this loop's.
+
+---
+
+## 2026-09-04 — thirty-fifth run, audit-only; resumed after account-issue interruption, no new bugs found
+
+Resuming this loop after an account interruption (this run's own dispatch
+noted the loop had completed 32 runs 2026-09-02–03 before stopping; the
+log shows two more, the thirty-third and thirty-fourth, already landed on
+2026-09-04, so the interruption and resumption happened around those).
+Same mandate, no project changes.
+
+`git pull origin master` — up to date at `f11e322`, ~116 minutes old at
+start (`f11e322` committed `2026-09-04T18:20:34Z` vs. `date -u` →
+`2026-09-04T20:16:03Z`) — well clear of the 45-minute collision window.
+
+**Method:** `npm install` (usual incidental `package-lock.json` `libc`-field
+diff, reverted). `npm run build` clean (same 484KB/1017KB main/hero-scene
+split modulo minor hashing, same chunk-size advisory). `npm run lint`
+clean — identical 6 pre-existing `only-export-components` warnings, no
+new ones. Real Playwright pass against a production `vite preview` build
+(`/opt/pw-browsers/chromium-1194`, `executablePath` pinned directly, same
+as prior runs), desktop 1440px and mobile 390×844 with `isMobile`/
+`hasTouch` set directly, EN/AR via the in-page toggle. Zero console/page
+errors across every capture.
+
+**Methodology note for future runs, not a site bug:** `page.screenshot({
+fullPage: true })` reliably blanks the hero's WebGL canvas (the exam-light
+object renders as nothing — just the particle background) even though the
+object is fully rendered and correct. Confirmed directly: a viewport-only
+screenshot taken at the identical wall-clock moment as a blank fullPage
+capture shows the object rendering correctly. This is a Chromium/Playwright
+stitching artifact with WebGL canvases during full-page capture, not a
+regression — don't waste a future run chasing a "missing hero object" that
+only shows up in `fullPage: true` screenshots. Segment/viewport screenshots
+(scroll + capture per screen) are the reliable method and were used for
+the actual audit below.
+
+**Full visual pass, both languages, both viewports** (hero, process,
+portfolio, pricing, contact — about remains deliberately empty, not a
+gap): headline/subhead/CTA copy, hero stat count-up (reaches 80+ once
+settled — see note below), 3D exam-light centerpiece rendering correctly
+in both languages/viewports, process steps, all 3 anonymized portfolio
+cards (dental/dental/aesthetic, matching the niche-mix fix from the
+thirty-fourth run), pricing figures ($3,000-$10,000 / 50% to start / 50%
+before delivery / <24h) in both languages, contact block, WhatsApp number
+still rendering LTR inside RTL context (thirty-third run's bidi fix
+holds), mobile language toggle still fully reachable and clickable in
+both languages (thirty-third run's `LockGlow` fix holds), footer. RTL/LTR
+layout correct throughout, no visual regressions found anywhere.
+
+**Overflow check:** `document.documentElement.scrollWidth` vs.
+`clientWidth` — desktop 1440/1440 (no overflow) both languages; mobile
+398/390 both languages, the same 8px residual documented and ruled
+harmless since the thirty-third run (language toggle and all section text
+still fully on-screen and clickable). Unchanged, not re-chased.
+
+**Interaction testing (per this run's explicit brief to test real
+rendering/interaction, not just source reading):**
+- Portfolio "View" → dialog: opens correctly, closes via Escape, closes
+  via a real backdrop click (verified with Playwright's locator-based
+  click, which dispatches a proper actionable click sequence), body
+  scroll-lock (`overflow: hidden`) applied while open and released after
+  close. No stuck overlay, no residual dialog in the DOM after close.
+  (An earlier attempt at this same check using raw `page.mouse.click(x,y)`
+  coordinates falsely suggested backdrop-click-to-close was broken — that
+  was my own test artifact, not a site bug; the proper locator click
+  confirms it works. Noting this so a future run doesn't waste time
+  re-suspecting this dialog.)
+- Nav hover states: hovered and moved away, no stuck highlight/cursor
+  state observed after.
+- No dead hover interactions or stuck cursor states found this run (the
+  category of bug this brief specifically calls out as only catchable by
+  actually running the site).
+
+**No code changes this run.** Full build/lint/browser audit found nothing
+that needed fixing — a clean no-op pass.
+
+**Untouched, per standing rules:** `portfolio-data.ts` (`src/lib/`, all 3
+entries confirmed anonymized, no real client names), pricing figures
+(confirmed both languages), About section (still deliberately empty,
+correct — no placeholder content added), contact@zaylogear.com (confirmed
+correct, unchanged).
+
+**Not touched this run, deliberately:** hero-delay — already resolved by
+Aymean directly (thirty-fourth run), nothing left to check here beyond
+the qualitative confirmation the intro still plays and resolves normally,
+which it does. Mobile emitter-glow/sparkle question — still blocked on a
+real device or non-software-rendered browser, no new angle this run.
+
+**STATUS: NOT YET READY TO DEPLOY**, unchanged from the thirty-fourth
+run's assessment — nothing regressed and nothing new was found to fix.
+Both previously-open items (hero-delay, portfolio/niche mismatch) remain
+resolved. Remaining known gap is the mobile-only hero-glow rendering
+question, still blocked on real-device access, not something this
+environment can resolve. No console errors, no spec regressions, no
+fabricated content, dialog/hover interactions all verified working by
+actually running the site. As before: if Aymean is satisfied with the
+3-card portfolio and accepts the mobile-glow gap as a known, real-device-
+only unknown, there may not be much left to block a deploy decision on
+craft/QA grounds — that call remains his, not this loop's.
