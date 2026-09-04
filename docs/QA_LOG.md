@@ -3073,3 +3073,111 @@ actually running the site. As before: if Aymean is satisfied with the
 3-card portfolio and accepts the mobile-glow gap as a known, real-device-
 only unknown, there may not be much left to block a deploy decision on
 craft/QA grounds — that call remains his, not this loop's.
+
+---
+
+## 2026-09-04 — thirty-sixth run, audit-only; found and corrected a detached HEAD, no site bugs
+
+**Housekeeping first, not a site issue:** at start of run this checkout's
+`HEAD` was detached (sitting on `origin/master`'s commit directly rather
+than on the local `master` branch, which was 5 commits behind). Checked
+out `master` and fast-forwarded it to `origin/master` (`21b0611`,
+identical content to what the detached HEAD already had — no risk of
+losing work, just fixed which ref future commits from this loop would
+land on). Flagging this so a future run isn't surprised if it inherits a
+clean attached `master` — this was almost certainly a one-off artifact of
+how this session's container was provisioned, not something the previous
+run did wrong.
+
+`git pull origin master` — up to date at `21b0611`, ~108 minutes old at
+start, clear of the 45-minute collision window.
+
+**Method:** `npm install` (same incidental `package-lock.json` `libc`-field
+diff as every prior run, reverted, not committed). `npm run build` clean
+(same 484KB/1017KB chunk-size advisory, no new warnings). `npm run lint`
+clean — same 6 pre-existing `only-export-components` warnings. Real
+Playwright pass against a production `vite preview` build
+(`/opt/pw-browsers/chromium-1194`, `executablePath` pinned), desktop
+1440px and mobile 390×844 (`isMobile`/`hasTouch` set), both languages via
+the in-page toggle (`[aria-label="Toggle language"]`). Zero console/page
+errors across every capture.
+
+**Note for future runs:** the app's default language on a fresh
+session/context is Arabic (`lang` state initializes to `'ar'` in
+`i18n.tsx`) — the toggle button click switches to English. Don't assume a
+freshly-loaded, non-toggled page is English; check `document.documentElement.dir`
+(`rtl` = Arabic, `ltr` = English) rather than assuming based on load order.
+
+**Full visual pass, both languages, both viewports** (hero, process,
+work/portfolio, pricing, contact — about still deliberately empty):
+headline/subhead/CTA copy correct in both languages, hero stat count-up
+settles to 80+ in both languages (confirmed by waiting out the full
+animation — a quick post-toggle screenshot can catch it mid-count-up
+showing a lower number like "52+", which is a test-timing artifact, not a
+site bug; note this so a future run doesn't misdiagnose it), 3D exam-light
+centerpiece renders correctly in both languages/viewports, all 3
+anonymized portfolio cards present (dental/dental/aesthetic, matches the
+niche mix from the thirty-fourth run), pricing figures ($3,000-$10,000 /
+50% to start / 50% before delivery / <24h) correct both languages, contact
+block correct (`contact@zaylogear.com`, WhatsApp `+966 57 351 3946`
+rendering LTR inside RTL context), footer, RTL/LTR layout correct
+throughout.
+
+**Overflow check:** `document.documentElement.scrollWidth` vs.
+`clientWidth` — desktop 1440/1440 both languages (no overflow, as always).
+Mobile: measured 390/390 (no overflow) when checked after scrolling
+through the full page, but re-measured 398/390 (the same 8px residual
+documented since the thirty-third run) when checked right at the hero
+right after page load/toggle, before scrolling elsewhere — so the residual
+is still present, just transient/scroll-position-dependent in a way this
+run's first pass happened to miss. Not a new finding, not re-investigating
+it further — still the same harmless, already-ruled-on residual (language
+toggle and all section text remain fully on-screen and clickable either
+way). Noting the measurement nuance only so a future run doesn't get a
+false "it's fixed" reading from a single measurement taken post-scroll.
+
+**Interaction testing:** portfolio card image is intentionally hidden
+behind a `card-static` overlay (`clip-path` wipe) until hovered — confirmed
+this is the designed reveal effect, not a broken/missing image (images
+themselves load fine, `naturalWidth`/`naturalHeight` correct, zero failed
+network requests); hover reveals the real screenshot and resets cleanly
+with no stuck state after moving away. Portfolio "View" dialog: opens on
+click, closes on Escape (DOM node is removed within ~200-300ms — an exit
+animation, not a stuck dialog; a check taken at exactly 500ms can still
+catch the node mid-removal, which is a test-timing artifact worth knowing
+about, not a bug), body scroll-lock applied while open and released after
+close. No dead hover interactions or stuck cursor states found.
+
+**Intro-sequence timing re-check (informational, not re-opening the
+item):** captured frames every 500ms from page load. Confirmed the
+thirty-fourth run's fix holds — logo assembles, lock-glow pulses, holds,
+and resolves into the header lockup with hero content visible by roughly
+t=2.5-3s, well under the originally-flagged ~7s. Not touching this
+further; already resolved per Aymean's own change, not this loop's call to
+make.
+
+**No code changes this run.** Full build/lint/browser/interaction audit
+found nothing that needed fixing — a clean no-op pass on the code side,
+though house-keeping (branch state) was corrected.
+
+**Untouched, per standing rules:** `portfolio-data.ts` (all 3 entries
+confirmed anonymized, no real client names), pricing figures (confirmed
+both languages), About section (still deliberately empty, correct — no
+placeholder content added), contact@zaylogear.com (confirmed correct,
+unchanged).
+
+**Not touched this run, deliberately:** mobile emitter-glow/sparkle
+question — still blocked on a real device or non-software-rendered
+browser, no new angle this run.
+
+**STATUS: NOT YET READY TO DEPLOY**, unchanged from the thirty-fourth/
+thirty-fifth runs' assessment — nothing regressed and nothing new was
+found to fix. Both previously-open items (hero-delay, portfolio/niche
+mismatch) remain resolved. Remaining known gap is the mobile-only
+hero-glow rendering question, still blocked on real-device access. No
+console errors, no spec regressions, no fabricated content, dialog/hover
+interactions verified working by actually running the site. As before: if
+Aymean is satisfied with the 3-card portfolio and accepts the mobile-glow
+gap as a known, real-device-only unknown, there may not be much left to
+block a deploy decision on craft/QA grounds — that call remains his, not
+this loop's.
