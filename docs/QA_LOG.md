@@ -3181,3 +3181,128 @@ Aymean is satisfied with the 3-card portfolio and accepts the mobile-glow
 gap as a known, real-device-only unknown, there may not be much left to
 block a deploy decision on craft/QA grounds — that call remains his, not
 this loop's.
+
+---
+
+## 2026-09-05 — thirty-seventh run, audit-only; new finding: intermittent portfolio-dialog backdrop-close failure (not fixed, see reasoning)
+
+`git pull origin master` — up to date at `09c9d9f`, ~106 minutes old at
+start, clear of the 45-minute collision window. Local checkout was
+detached again (same one-off container-provisioning artifact the
+thirty-sixth run flagged) — checked out `master` and fast-forwarded,
+no content difference, no risk to anyone's work.
+
+**Method:** `npm install` (same incidental `package-lock.json` `libc`-field
+diff as every prior run, reverted, not committed). `npm run build` clean
+(same 484KB/1017KB chunk-size advisory). `npm run lint` clean — same 6
+pre-existing `only-export-components` warnings. Real Playwright pass
+against a production `vite preview` build (`/opt/pw-browsers/chromium-1194`,
+`executablePath` pinned), desktop 1440px and mobile 390×844
+(`isMobile`/`hasTouch`), both languages via the in-page toggle. Zero
+console/page errors across every capture.
+
+**Full visual pass, both languages, both viewports** (hero, process,
+work/portfolio, pricing, contact — about still deliberately empty):
+copy, layout, 3D exam-light centerpiece, 3 anonymized portfolio cards
+(dental/dental/aesthetic — unchanged mix), pricing figures, contact block
+(`contact@zaylogear.com`, WhatsApp `+966 57 351 3946` LTR-order inside
+RTL), footer — all correct in both languages. Overflow: desktop 1440/1440
+both languages (clean). Mobile: re-confirmed the same 398/390 residual
+documented since the thirty-third run, measured the same way (immediately
+at the hero, before any scroll) — unchanged, not a new or worsening issue.
+
+**Stat counter re-check (informational, not a new finding):** a
+same-session language toggle remounts the counter (documented already in
+`src/lib/use-count-up.ts`'s own code comment — `reveal.tsx`'s `key={dir}`
+remounts every reveal, including the counter, on toggle) and it visibly
+restarts from 0. Measured the restart directly: 0 at t=300ms after
+toggle, 74 at t=1000ms, 80 (settled) at t=2500ms — confirms this is the
+existing designed behavior working as intended, not a regression. Noting
+the measurement so a future run doesn't mistake a post-toggle screenshot
+showing "0+" for a broken counter.
+
+**Portfolio touch-reveal (informational, not a bug):** mobile portfolio
+cards show the real screenshot without requiring a tap, unlike desktop's
+hover-reveal wipe. Confirmed intentional in code
+(`src/components/portfolio.tsx:19`, `usePointerFine`): touch devices
+reveal on scroll-into-view instead of hover, by design.
+
+**New finding this run — portfolio dialog backdrop-click-to-close is
+genuinely intermittent, not just a test artifact:** the thirty-fifth run's
+log states "closes via a real backdrop click (verified with Playwright's
+locator-based click...)" and dismissed an earlier raw-coordinate failure
+as a test artifact. This run re-tested that specific claim harder because
+the first attempt this run also showed a "still open" result, and it
+didn't resolve into a clean pass on retry:
+- 6 fresh page loads, each opening a portfolio card dialog and clicking
+  the confirmed-correct backdrop element (`[data-slot="dialog-overlay"]`,
+  verified via `elementFromPoint` to be the actual element under the
+  click point every time) with `page.mouse.click(10, 10)`: **2 of 6
+  closed, 4 of 6 stayed open.**
+- A separate pass using an explicit `mouse.down()` → 60ms wait →
+  `mouse.up()` sequence (closer to real hardware timing than the
+  composite `.click()` helper, to rule out a too-fast synthetic click):
+  **3 of 8 closed, 5 of 8 stayed open.**
+- Escape-to-close and the explicit close (X) button were not affected —
+  both closed the dialog reliably on every attempt this run.
+- Read through the relevant library internals
+  (`node_modules/@base-ui/react/floating-ui-react/hooks/useDismiss.js`,
+  the underlying `@base-ui/react` 1.7.0 Dialog's outside-press handling)
+  to rule out an obvious app-level cause (a stray global click/pointerdown
+  listener, a z-index/stacking mismatch letting some other element eat the
+  click, an RTL-related scrollbar-detection false-positive at the
+  top-left test coordinate). Found none of those in this codebase — no
+  app code registers a competing document-level click/pointerdown
+  listener, no z-index conflict (the overlay resolves correctly at the
+  click point every single time, per `elementFromPoint`), and the
+  library's own scrollbar-avoidance branch doesn't apply here (the overlay
+  itself has no scroll overflow). The dismiss logic itself is the
+  library's internal capture-phase + per-target one-shot-listener
+  machinery (`closeOnPressOutsideCapture` / `addTargetEventListenerOnce`
+  in `useDismiss.js`), which is too deep to safely re-diagnose or patch
+  blind from application code within this run.
+
+**Why this is logged as open rather than fixed:** genuinely uncertain
+whether this reflects a real intermittent bug an actual mouse-and-monitor
+user could hit, or a Chromium-DevTools-Protocol synthetic-input quirk
+specific to automated testing that doesn't reproduce with genuine OS-level
+input — this environment has no way to tell the two apart (same
+real-device limitation already on file for the mobile-glow item). The
+prior run's confident "verified working" claim and this run's ~40-60%
+failure rate on the identical interaction, tested multiple ways, can't
+both be fully right; rather than force a guess, or patch a third-party
+library's internal dismiss timing blind (risking a worse regression, e.g.
+a double-close/double-fire if the app added its own redundant
+close-on-overlay-click on top of Base UI's existing one), this is left
+as a flagged, reproducible-but-unexplained finding for a future run or
+Aymean's own judgment call. **Practical impact if real: low-to-moderate**
+— Escape and the visible close (X) button both close the dialog
+reliably every time, so no dead end exists for a real user even on an
+occasion where a backdrop click doesn't register.
+
+**Untouched, per standing rules:** `portfolio-data.ts` (all 3 entries
+still anonymized, no real client names), pricing figures (confirmed both
+languages), About section (still deliberately empty, correct), contact
+email (confirmed correct, unchanged).
+
+**Not touched this run, deliberately:** hero-delay (resolved by Aymean
+directly, thirty-fourth run) — confirmed the intro still plays and
+resolves normally (~2.5-3s), nothing further to check. Mobile
+emitter-glow/sparkle question — still blocked on a real device or
+non-software-rendered browser, no new angle this run.
+
+**STATUS: NOT YET READY TO DEPLOY.** One new, real, reproducible-but-
+unexplained finding this run (intermittent portfolio-dialog backdrop-click
+close failure, detailed above) — not fixed, because a safe, confident fix
+isn't possible without either a real device/browser to rule out the
+automation-artifact explanation, or a deeper dive into third-party dismiss
+internals than is prudent to attempt blind in one run. Everything else
+this run is unchanged from the thirty-fourth/fifth/sixth runs' clean
+assessment: no console errors, no spec regressions, no fabricated content,
+build/lint clean. Both previously-resolved items (hero-delay, portfolio/
+niche mismatch) remain resolved. Two items remain blocked on real-device
+access (mobile-glow, and now this backdrop-click question) — a future run
+with access to a real browser/device should re-test the backdrop-click
+case specifically before ruling either way. Aymean's call on whether the
+low-impact nature of this finding (Escape and the X button both always
+work) is acceptable to ship around, same as the mobile-glow gap.
