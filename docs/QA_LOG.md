@@ -3689,3 +3689,123 @@ resolved. As before: if Aymean is satisfied with the 3-card portfolio and
 accepts these two real-device-only unknowns as known, low-impact gaps, there
 may not be much left to block a deploy decision on craft/QA grounds — that
 call remains his, not this loop's.
+
+## 2026-09-05 — forty-first run, audit-only; no new bugs, two test-methodology traps caught and documented
+
+`git pull origin master` — up to date at `67cb28f` (fortieth run's own log
+entry), ~1h51m old at start, clear of the 45-minute collision window.
+
+**Method:** `npm install` (same incidental `package-lock.json` `libc`-field
+diff, reverted, not committed). `npm run build` clean — identical 484KB/
+1017KB main/hero-scene chunk split, same chunk-size advisory, no new
+warnings. `npm run lint` clean — same 6 pre-existing `only-export-components`
+warnings, no new ones. Real Playwright pass against a production `vite
+preview` build (global `playwright` via
+`require.resolve('playwright', {paths: ['/opt/node22/lib/node_modules']})`,
+`executablePath` pinned to `/opt/pw-browsers/chromium-1194/chrome-linux/chrome`),
+desktop 1440×900 and mobile (`devices['iPhone 13']`), both languages via
+`[aria-label="Toggle language"]`. Zero console errors and zero failed
+network requests across every capture, both languages, both viewports.
+
+**Two methodology traps in this run's own first-draft script, caught before
+drawing conclusions — noting both for future runs:**
+
+1. **Language-toggle label default.** A first-draft capture assumed the
+   no-click state was English and labeled files accordingly. The site
+   actually defaults to Arabic (RTL) on load — the header button reads "EN"
+   as the *target* language to switch to, not the current one — exactly as
+   the fortieth run's own log already states ("Arabic (default)... English
+   after toggle"). Relabeled captures correctly
+   (`*-ar-default` / `*-en-toggled`) before analysis; no site defect, a
+   repeat of a trap already on record, now cross-referenced here too.
+2. **`fullPage` screenshot without scrolling through first.** An initial
+   `page.screenshot({ fullPage: true })` taken immediately after
+   `waitUntil: 'networkidle'` (no incremental scroll) rendered Process,
+   Work, Pricing, and Contact as entirely blank between the hero and the
+   footer, both languages, both viewports — looked exactly like a severe
+   scroll-reveal regression at first glance. Root cause: Playwright's
+   `fullPage` capture resizes the viewport and shoots once; it does not
+   walk the page, so Motion's `whileInView`/`useInView({ once: true })`
+   reveal animations on those sections never get a real scroll-into-view
+   trigger and stay at their initial (hidden) state. Fixed by scrolling the
+   page in 400px steps with a 250ms settle between steps before every
+   capture. After the fix, all sections render with full content in every
+   capture. **Not a new bug** — a test-harness gap, but worth a permanent
+   note here since it produces a very convincing false "sections missing"
+   finding if a future run's script skips the scroll-through step.
+
+**Portfolio hover-reveal, verified as intentional by reading the source,
+not just observing it:** on desktop, un-hovered portfolio cards render as
+solid dark rectangles (looks alarming in a raw screenshot) while the hovered
+card shows the real screenshot underneath a "VIEW" cursor circle. Confirmed
+in `src/components/portfolio.tsx`'s `ScreenWipe` component (with its own
+explanatory comment) that this is a deliberate "static/glitch overlay wipes
+away on hover" effect — pointer-fine (desktop) reveals on `group-hover`,
+touch devices reveal permanently on first scroll-into-view via
+`whileInView`. This is exactly why the mobile captures show all three
+portfolio images plainly (no hover state on touch) while an un-hovered
+desktop capture does not. Verified all three images actually load
+(`naturalWidth: 1440`, zero failed requests) and that hovering the first
+card visibly wipes to reveal the real screenshot. Not a bug — logging the
+verification method here so a future run doesn't re-flag static-looking
+desktop portfolio thumbnails without first hovering them.
+
+**New observation, not treated as a bug:** the mobile header renders only
+the logo, language toggle, and "Book a Call" button — the `Process / Work /
+Pricing / Contact` anchor-nav (`<nav class="hidden ... md:flex">`) has no
+mobile equivalent (no hamburger/drawer). This is a real, confirmed absence,
+not a rendering artifact. Leaving it unflagged as a defect: this is a
+single, short scroll-page where every one of those sections is reachable by
+just continuing to scroll, the mobile header's CTA is still present, and no
+reference doc calls for a mobile nav drawer specifically. Noting it here as
+a considered-and-accepted state rather than an unexamined gap, in case a
+future run wants to revisit with a stronger opinion — not something this
+run is unilaterally adding UI for.
+
+**Full visual pass, both languages, both viewports** (hero, process/"how it
+works", work/portfolio, pricing, contact — about still deliberately empty):
+copy, layout, 3 anonymized portfolio cards (`portfolio-data.ts` re-read
+directly — `greendent`/`bently`/`lavida` slugs, no real client names,
+dental/dental/aesthetic mix unchanged), pricing figures ($3,000-$10,000 /
+50% to start / 50% before delivery / <24h) correct both languages, contact
+block (`contact@zaylogear.com`, WhatsApp `+966 57 351 3946`) correct,
+footer. Overflow check via `document.documentElement.scrollWidth` vs.
+`clientWidth`: desktop 1440/1440 both languages (clean); mobile 398/390
+both languages — same already-documented transient residual on file since
+the thirty-third run, unchanged, not worsening.
+
+**Portfolio dialog spot-check:** opened via `[data-cursor="view"]` click,
+closed on a single Escape press within 700ms this run — consistent with
+the thirty-seventh/eighth runs' already-logged first-attempt-flakiness
+finding, not contradicting it. Did not re-run a full multi-trial batch;
+no new angle to justify one.
+
+**Untouched, per standing rules:** `portfolio-data.ts` anonymization
+(confirmed by direct source read), pricing figures (confirmed both
+languages), About section (still deliberately empty, correct), contact
+email (confirmed correct, unchanged).
+
+**Not touched this run, deliberately:** hero-delay (resolved by Aymean
+directly, thirty-fourth run) — nothing further to check. Mobile
+emitter-glow/sparkle question — still blocked on a real device or
+non-software-rendered browser, no new angle this run. Dialog-dismiss
+timing — already thoroughly investigated, this run's single spot-check is
+consistent with the existing finding, not a reason to re-open a full
+investigation.
+
+**No code changes this run.** Both apparent anomalies traced back to this
+run's own test-script mistakes (documented above so future runs don't
+repeat them), not real site defects — a clean no-op pass on the code side.
+
+**STATUS: NOT YET READY TO DEPLOY.** No console errors, no failed network
+requests, no spec regressions, no fabricated content, build/lint clean, full
+bilingual/responsive visual pass clean once captured correctly. Two items
+remain blocked on real-device/non-software-rendered-browser access:
+mobile-glow and dialog-dismiss timing (unchanged). Both previously-resolved
+items (hero-delay, portfolio/niche mismatch) remain resolved. One new,
+consciously-accepted observation this run (no mobile nav drawer) is logged
+above, not treated as blocking. As before: if Aymean is satisfied with the
+3-card portfolio and accepts the real-device-only unknowns and the
+no-mobile-nav-drawer choice as known, low-impact gaps, there may not be much
+left to block a deploy decision on craft/QA grounds — that call remains
+his, not this loop's.
