@@ -4518,3 +4518,149 @@ still needs Aymean's explicit yes/no. Nothing new is blocking deploy on
 craft/QA grounds beyond the standing list — the deploy-readiness call
 remains Aymean's, pending the footer-entity confirmation and his own
 creative-pacing/device-testing input on the two other standing items.
+
+## 2026-09-05 — forty-eighth run, one real bug found and fixed (language-toggle content blanking), one flaky-but-inconclusive mobile finding, no other regressions
+
+`git pull origin master` — up to date at `089c515` (forty-seventh run's own log
+entry), ~1h43m old at start, clear of the 45-minute collision window.
+`npm install` (same incidental `package-lock.json` `libc`-field diff every
+prior run has seen, reverted via `git checkout --`, not committed). `npm run
+build` clean, `npm run lint` (`oxlint`) clean — same 6 pre-existing
+`only-export-components` warnings both before and after this run's code
+change, no new ones.
+
+**Real bug found, root-caused, and fixed — content blanking after a
+language toggle while scrolled down.** Real Playwright pass against a
+production `vite preview` build (pre-installed Chromium,
+`executablePath` pinned to `/opt/pw-browsers/chromium-1194`), desktop
+1440×900. Doing a full natural scroll-through in Arabic (the default
+language) then toggling to English without resetting scroll position — an
+entirely ordinary interaction, since the language toggle lives in the
+sticky header and is reachable from any scroll position — left the
+**Process, Portfolio, and Pricing sections completely blank** (rendered
+black, no heading/card content at all) above the visitor's current scroll
+position, only recovering if they manually scrolled back up through each
+section again. Desktop full-page screenshots before/after the toggle made
+this immediately visible; this was not something a source-code read alone
+would have caught, exactly the class of bug this loop exists to catch by
+actually rendering and interacting.
+
+Root cause, confirmed via direct DOM/computed-style inspection (ancestor
+chain, not just the heading element's own `opacity`, since CSS opacity
+doesn't inherit into a child's own computed style): `src/components/
+reveal.tsx`'s `Reveal`/`RevealGroup` used `key={dir}` to force a full
+remount on every language switch, needed because Motion's `initial` prop is
+only applied once at mount, and an unrevealed block otherwise kept the
+wrong-language entry offset forever. But that remount also affected blocks
+already scrolled past: their fresh `viewport={{ once: true }}` observer
+never sees them intersect again (they're now above the viewport, not
+below), so they remounted straight into their pre-reveal `opacity: 0` state
+and stayed there — invisible — until manually scrolled back into view. Not
+a hypothetical: reproduced deterministically 100% of the time (multiple
+repro scripts, both the original bug and the fix, before/after screenshots
+and computed-style dumps saved in this run's own scratch directory).
+
+**Fix:** replaced the `initial`/`whileInView`/`key={dir}` remount approach
+with an imperative `useAnimation()` + `useInView()` hook (`useReveal` in
+`reveal.tsx`) that never remounts. A block that has already revealed is
+never touched again by a `dir` change (its `AnimationControls` are only
+reset to "hidden" while `!revealedRef.current`); a block that hasn't
+revealed yet gets its resting pose re-set via `controls.set('hidden')`
+every time `dir` changes, so it still flies in from the correct side
+whenever it eventually reveals. Verified after the fix: (1) the original
+repro (scroll to bottom in Arabic, toggle to English, full-page screenshot)
+now shows every section fully rendered, no blank regions; (2) a not-yet-
+revealed section toggled before ever being scrolled to still reveals
+correctly with the right-language offset once scrolled into view
+(`opacity: 0` → `1`, `transform` → `none`); (3) directional entries
+(`from="start"/"up"/"end"` on `process.tsx`'s and `pricing.tsx`'s
+`RevealItem`s) verified via computed `transform` matrices to still resolve
+per-item to the correct LTR/RTL side after a toggle
+(`start`→`translateX(-32px)`, `up`→`translateY(32px)`, `end`→
+`translateX(32px)` in LTR, mirrored in RTL) — the entire reason the old
+`key={dir}` approach existed is preserved, just without the blanking
+side-effect. `npm run build`/`lint` clean before and after. Also updated a
+now-stale comment in `src/lib/use-count-up.ts` that explained its
+elapsed-time-based pacing by referencing the just-removed `key={dir}`
+mass-remount main-thread-contention scenario — the pacing logic itself is
+unchanged and still correct, only the comment's rationale was outdated.
+
+**New finding, investigated, left unresolved as likely environment
+flakiness, no code change:** one single run of this loop's own mobile
+Playwright script (heavy desktop pass in the same browser process,
+followed by a mobile-viewport context with a single `waitForTimeout(8000)`
+then a DOM check) twice showed the hero's animated "+80" stat stuck at
+"+0" and the "$0 upfront" seal tile entirely absent from `document.
+body.innerText`. Chased this before writing it off: seven follow-up repro
+attempts — a fresh isolated mobile context (3 runs), a heavy-desktop-then-
+mobile sequence with per-second polling (1 run), and an exact structural
+replica of the failing script including the heavy desktop pass (2 runs) —
+all came back correct (`+80` and `$0` present, consistently, from as
+early as 1 second after load). No structural difference between the
+failing script and the exact-replica script that didn't fail was
+identified. `src/lib/use-count-up.ts`'s own counter logic is already
+specifically designed to be resilient to exactly this kind of main-thread
+delay (elapsed-time-based progress, not a fixed tick count — see the
+file's own comment, updated this run), so the only way it shows `+0` after
+8 real seconds is if its `setInterval` callback never fired even once in
+that window, an extreme starvation scenario. Given the inconsistent
+reproduction (2 failures out of 9 total attempts, no isolated variable
+identified) and that this sandbox's software-rendered Chromium under
+mobile-device emulation already has multiple independently-documented
+timing/capture reliability issues (forty-fifth through forty-seventh
+runs), this reads as another instance of that same class of environment-
+only flakiness rather than a site defect — but it is a new symptom
+(previous runs' flakiness was about screenshot rasterization and capture
+races, not a stateful counter value), so noting it here rather than
+silently folding it into the existing conclusion. If a future run sees
+this again with a cleaner isolating angle, worth re-opening.
+
+**Full pass, evidence gathered this run:** desktop EN/AR full scroll-
+through clean both before and after the fix, zero console errors, zero
+failed network requests across all four language/viewport combinations.
+Mobile DOM/text checks (pricing range, deposit/turnaround copy, contact
+email) all correct in both languages. Directional RTL/LTR mirroring
+spot-checked via computed `transform` values (see above), correct.
+Mobile-viewport `scrollWidth`/`clientWidth` overflow check came back clean
+(390/390) on 3 of 4 samples this run and did not reproduce the forty-
+seventh run's 8px rasterization-mismatch finding on the 4th — consistent
+with that finding's own conclusion (intermittent, environment-only, not a
+CSS defect). `portfolio-data.ts` re-read directly — `greendent`/`bently`/
+`lavida` slugs, no real client names, unchanged. `site-footer.tsx`'s
+`LEGAL_ENTITY = 'ZYL Commerce LLC'` re-read directly — unchanged, still
+open, still needs Aymean's explicit confirmation, not re-litigated further
+this run. Niche framing reconfirmed broad ("Clinics of Every Kind — Saudi
+Arabia" / متخصصون في مواقع العيادات بكل تخصصاتها), not narrowed. Pricing
+figures ($3,000-$10,000 / 50% to start / 50% before delivery / <24h) and
+contact details (`contact@zaylogear.com`, WhatsApp `+966 57 351 3946`)
+confirmed correct both languages.
+
+**Not touched this run, deliberately:** hero-delay (~7s) — still blocked on
+Aymean's own creative-pacing decision, no new angle. Mobile-only hero-glow
+gap — still blocked on real-device/non-software-rendered-browser access, no
+new angle. Dialog-dismiss timing — already thoroughly investigated across
+multiple runs, not reopened. Footer legal-entity name — standing open flag,
+unchanged, Aymean's call. About section — deliberately content-empty,
+correct as-is, not touched.
+
+**One real site-code fix committed this run** (`reveal.tsx`'s language-
+toggle content-blanking bug — see above), plus one stale-comment cleanup in
+`use-count-up.ts`. This is not a no-op run: the reveal.tsx fix is a genuine
+craft-bar issue (a real visitor scrolling down and switching language would
+have hit a page that looked broken) that source-reading alone would not
+have caught.
+
+**STATUS: NOT YET READY TO DEPLOY.** Build/lint clean, zero console errors,
+zero failed network requests, full bilingual/responsive visual pass clean
+after this run's fix, no fabricated content, no other spec regressions. One
+real bug fixed and verified this run (language-toggle content blanking).
+One new but inconclusive/likely-environment-only flaky finding noted above,
+not blocking, not code-changed. Three items remain blocked exactly as
+before: mobile-glow and dialog-dismiss timing (real-device/non-software-
+rendered-browser access), hero-delay (Aymean's creative-pacing call). One
+open content flag carried forward unchanged: the footer's "ZYL Commerce
+LLC" directing-entity claim still needs Aymean's explicit yes/no. The
+deploy-readiness call remains Aymean's, pending the footer-entity
+confirmation and his own creative-pacing/device-testing input on the two
+other standing items — craft/QA-wise, this run found and closed a real gap
+rather than just confirming the status quo.

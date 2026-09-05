@@ -19,13 +19,10 @@ export function useCountUp(target: number, duration = 2) {
     // enough to register as its own tick rather than blurring into a ramp.
     //
     // Paced against real elapsed time (performance.now()), not a fixed count
-    // of interval firings. This section replays inside a RevealItem, and
-    // reveal.tsx's key={dir} remounts every reveal on the page at once when
-    // the language toggles — that main-thread contention was measured
-    // delaying this interval's firings enough to stretch a 2s count into
-    // ~4.5s. Deriving progress from elapsed time means a late-firing tick
-    // jumps straight to the value it should already be at, so the count
-    // still lands within ~duration regardless of what else is animating.
+    // of interval firings, so a late-firing tick (main-thread contention from
+    // whatever else is animating at the time) jumps straight to the value it
+    // should already be at — the count still lands within ~duration
+    // regardless of what else is happening on the page.
     const STEP_MS = 240
     const start = performance.now()
     const totalMs = duration * 1000

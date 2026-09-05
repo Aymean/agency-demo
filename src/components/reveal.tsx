@@ -1,5 +1,5 @@
-import { motion, type Variants } from 'motion/react'
-import type { ReactNode } from 'react'
+import { motion, useAnimation, useInView, type Variants } from 'motion/react'
+import { useLayoutEffect, useRef, type ReactNode } from 'react'
 import { useLang } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 
@@ -27,24 +27,43 @@ const TRAVEL = 32
  * Motion animates x in pixels, so there is no logical-property equivalent to
  * lean on: an item entering from the inline-start must come from the left in
  * English and from the right in Arabic, or half the site's animations point
- * the wrong way in RTL and nothing in the type system notices. */
-/* Note the `key={dir}` on both consumers below. Motion applies `initial` once,
- * at mount, and these elements sit at that resting state until they scroll into
- * view — so swapping the variants object afterwards does NOT restyle them. With
- * the site defaulting to Arabic, every not-yet-revealed section would keep the
- * RTL entry offset after a switch to English and fly in from the wrong side.
- * Re-keying on `dir` remounts them so `initial` is re-applied. The cost is that
- * blocks currently on screen replay their reveal when the language changes,
- * which is a reasonable way to present a full-page text swap anyway.
+ * the wrong way in RTL and nothing in the type system notices.
  *
- * The key belongs on the two components that OWN a whileInView trigger, never
- * on RevealItem alone. RevealItem has no trigger of its own — it is driven by
- * its group by variant name — so remounting just the child under a group that
- * has already fired its once:true trigger leaves the child sitting at "hidden"
- * with nothing left to tell it to show. That is not theoretical: it blanked
- * every item in an already-revealed grid the moment the language was switched.
- * Keying the group remounts parent and children together, so the trigger
- * re-arms and the children come with it. */
+ * Reveals used to be driven by `initial`/`whileInView` with a `key={dir}` to
+ * force the resting pose to re-match direction after a language switch —
+ * Motion applies `initial` only once, at mount, so there was no other way to
+ * make an unrevealed block re-snap to the correct side. But that meant every
+ * reveal remounted on switch, including ones already scrolled past: their
+ * fresh `once: true` observer never sees them intersect again (they're above
+ * the viewport, not below it), so they remounted straight into "hidden" and
+ * stayed there — blank — until the visitor scrolled back up through them.
+ *
+ * `useReveal` replaces that with an imperative `AnimationControls` instance
+ * per block plus `useInView`. Nothing ever remounts, so a block that has
+ * already shown is simply never touched again by a `dir` change. A block
+ * that HASN'T shown yet gets its resting pose re-set (via `controls.set`,
+ * no transition) every time `dir` changes, so whichever side it eventually
+ * flies in from is always correct for the language on screen at that time. */
+function useReveal(dir: 'ltr' | 'rtl', active: boolean) {
+  const ref = useRef<HTMLDivElement>(null)
+  const controls = useAnimation()
+  const revealedRef = useRef(false)
+  const inView = useInView(ref, VIEWPORT)
+
+  useLayoutEffect(() => {
+    if (!revealedRef.current) controls.set('hidden')
+  }, [dir, controls])
+
+  useLayoutEffect(() => {
+    if (inView && active && !revealedRef.current) {
+      revealedRef.current = true
+      controls.start('show')
+    }
+  }, [inView, active, controls])
+
+  return { ref, controls }
+}
+
 function variantsFor(from: RevealFrom, dir: 'ltr' | 'rtl'): Variants {
   const inlineStart = dir === 'rtl' ? TRAVEL : -TRAVEL
   const offset =
@@ -107,10 +126,11 @@ export function Reveal({
   lock?: boolean
 }) {
   const { dir } = useLang()
+  const { ref, controls } = useReveal(dir, true)
 
   return (
     <motion.div
-      key={dir}
+      ref={ref}
       // `relative` only when the glow needs a containing block, so no existing
       // caller silently gains a new positioning context. `overflow-hidden`
       // rides along with it: LockGlow is deliberately oversized (130%/160% of
@@ -120,9 +140,7 @@ export function Reveal({
       // own width past the viewport and pushed the language toggle (the only
       // way to switch languages below the `md` nav breakpoint) off-screen.
       className={cn(lock && 'relative overflow-hidden', className)}
-      initial="hidden"
-      whileInView="show"
-      viewport={VIEWPORT}
+      animate={controls}
       variants={variantsFor(from, dir)}
       transition={{ delay, duration: 0.9, ease: EASE }}
     >
@@ -153,14 +171,13 @@ export function RevealGroup({
   play?: boolean
 }) {
   const { dir } = useLang()
+  const { ref, controls } = useReveal(dir, play)
 
   return (
     <motion.div
-      key={dir}
+      ref={ref}
       className={className}
-      initial="hidden"
-      {...(play ? { whileInView: 'show' as const } : { animate: 'hidden' as const })}
-      viewport={VIEWPORT}
+      animate={controls}
       variants={{ show: { transition: { staggerChildren: stagger } } }}
     >
       {children}
