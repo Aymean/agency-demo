@@ -3939,3 +3939,113 @@ As before: if Aymean is satisfied with the 3-card portfolio and accepts
 these real-device-only unknowns and the no-mobile-nav-drawer choice as
 known, low-impact gaps, there may not be much left to block a deploy
 decision on craft/QA grounds — that call remains his, not this loop's.
+
+## 2026-09-05 — forty-third run, audit-only; no new bugs, hero-delay timing refined with repeated trials (still blocked-on-Aymean, not re-opened)
+
+`git pull origin master` — up to date at `7dfa2bb` (forty-second run's own
+log entry), ~1h38m old at start, clear of the 45-minute collision window.
+Same mandate as every prior run, not a new project.
+
+**Method:** `npm install` (same incidental `package-lock.json` `libc`-field
+diff, reverted, not committed). `npm run build` clean — identical 484KB/
+1017KB main/hero-scene chunk split, same chunk-size advisory, no new
+warnings. `npm run lint` clean — same 6 pre-existing `only-export-components`
+warnings, no new ones. Real Playwright pass against a production `vite
+preview` build (global `playwright` via
+`require.resolve('playwright', {paths: ['/opt/node22/lib/node_modules']})`,
+`executablePath` pinned to `/opt/pw-browsers/chromium-1194/chrome-linux/chrome`),
+desktop 1440×900 and mobile (`devices['iPhone 13']`), both languages via a
+fresh browser context per language (avoids the forty-second run's documented
+`fullPage`+same-context-toggle trap), full scroll-through (400px steps,
+250ms settle) before every capture per the forty-first run's methodology.
+Zero console errors and zero failed network requests across every capture,
+both languages, both viewports.
+
+**One methodology trap in this run's own first-draft script, caught and
+resolved before drawing conclusions (not a site bug):** an initial capture
+waited only ~500ms–1.3s after `networkidle`/language-toggle before
+screenshotting, and the mobile header's logo lockup (`header a[href="#top"]`)
+showed `opacity: 0` in that capture — looked like a broken/invisible header
+logo. Tracked via a `waitForTimeout` sweep in 500ms increments: the lockup's
+`opacity` sits at `0` through ~3.5s, transitions ~4-5s, and settles at `1`
+by ~5s — this is the intro sequence's own header-resolve beat (REBUILD_BRIEF
+§1 step 5), not a defect. Re-ran the full capture script with a 6s wait
+after load before any interaction/scrolling; header logo renders correctly
+in every subsequent capture, both languages, both viewports.
+
+**Hero canvas-appearance timing re-measured with repeated trials (new
+methodology, not a new investigation) — refines, does not contradict, the
+existing blocked-on-Aymean hero-delay item:** prior runs (thirty-fourth,
+fortieth, forty-first) each reported a single point measurement (~4.9s).
+This run measured `canvas` first-appearance after cold `domcontentloaded`
+across 6 separate trials: 8480ms, 7128ms, 5329ms, 4843ms, 7012ms, 6958ms
+(range 4.8s–8.5s, mean ~6.6s). Half the trials land at or above the
+originally-flagged ~7s figure that the thirty-fourth run's fix was reported
+to have resolved. No code changed this run or since the forty-second run's
+audit (confirmed via `git log` — no commits between the two). Most likely
+explanation is environment/CPU-contention variance in this shared sandbox
+when parsing/compiling the ~1MB `hero-scene` chunk and initializing
+software-rendered WebGL, rather than a regression — but a single
+measurement per run was clearly not capturing the real spread. **Not
+re-opening the hero-delay investigation or touching timing code** — it
+remains explicitly Aymean's creative-pacing call per the standing rule.
+Logging the wider range here so his decision (and any future run's
+measurement) accounts for real variance rather than treating ~4.9s as a
+fixed number.
+
+**Full visual pass, both languages, both viewports** (hero, process/"how it
+works", work/portfolio, pricing, contact — about still deliberately empty):
+copy, layout, 3D exam-light centerpiece, 3 anonymized portfolio cards
+(`portfolio-data.ts` re-read directly — `greendent`/`bently`/`lavida`
+slugs, no real client names, dental/dental/aesthetic mix unchanged), pricing
+figures ($3,000-$10,000 / 50% to start / 50% before delivery / <24h) correct
+both languages, contact block (`contact@zaylogear.com`, WhatsApp
+`+966 57 351 3946`) correct, footer. Niche framing reconfirmed broad
+("Clinics of every kind — Saudi Arabia" / متخصصون في مواقع العيادات بكل
+تخصصاتها), not narrowed. Overflow via `document.documentElement.scrollWidth`
+vs. `clientWidth`: desktop 1440/1440 both languages (clean); mobile 390/390
+both languages this run (clean) — the thirty-third-run-documented transient
+residual did not reproduce this run; consistent with it being
+timing/scroll-position-dependent as already on file, not treating this as a
+resolution.
+
+**Portfolio dialog spot-check:** opened via `[data-cursor="view"]` click;
+this run's single Escape-press trial did NOT close the dialog within
+~2.7s (dialog still present) — consistent with, not contradicting, the
+thirty-seventh/eighth runs' already-logged first-attempt-flakiness finding
+in this sandboxed/software-WebGL environment. Single spot-check only, not a
+reason to re-open the full multi-trial investigation.
+
+**Untouched, per standing rules:** `portfolio-data.ts` anonymization
+(confirmed by direct source read), pricing figures (confirmed both
+languages), About section (still deliberately empty, correct), contact
+email (confirmed correct, unchanged), no-mobile-nav-drawer (considered,
+non-blocking per forty-first run).
+
+**Not touched this run, deliberately:** mobile emitter-glow/sparkle
+question — still blocked on a real device or non-software-rendered
+browser, no new angle this run. Dialog-dismiss timing — already thoroughly
+investigated, this run's single spot-check is consistent with the existing
+finding, not a reason to re-open a full investigation.
+
+**No code changes this run.** The one apparent anomaly (header logo
+opacity) traced to this run's own capture-timing mistake, documented above
+so a future run doesn't repeat it; the hero-delay item's wider measured
+range is new data, not a new bug, and the item stays exactly where it was —
+blocked on Aymean's own creative-pacing decision. A clean no-op pass on the
+code side.
+
+**STATUS: NOT YET READY TO DEPLOY.** No console errors, no failed network
+requests, no spec regressions, no fabricated content, build/lint clean, full
+bilingual/responsive visual pass clean. Two items remain blocked on
+real-device/non-software-rendered-browser access: mobile-glow and
+dialog-dismiss timing (unchanged). Hero-delay remains blocked on Aymean's
+own creative-pacing decision — this run adds a wider, more honest timing
+range (4.8s-8.5s measured, not a fixed ~4.9s) for that decision, nothing
+more. Portfolio/niche mismatch remains resolved. No-mobile-nav-drawer
+remains a considered, non-blocking choice. As before: if Aymean is
+satisfied with the 3-card portfolio and accepts the real-device-only
+unknowns, the hero-delay timing range, and the no-mobile-nav-drawer choice
+as known, low-impact/deliberate gaps, there may not be much left to block a
+deploy decision on craft/QA grounds — that call remains his, not this
+loop's.
