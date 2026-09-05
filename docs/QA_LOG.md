@@ -4393,3 +4393,128 @@ craft/QA-side blocker list is unchanged from the forty-fifth run; the
 deploy-readiness call remains Aymean's, pending the footer-entity
 confirmation and his own creative-pacing/device-testing input on the two
 other standing items.
+
+## 2026-09-05 — forty-seventh run, audit-only, one new environment-limitation finding chased to ground, no site code changes
+
+`git pull origin master` — up to date at `2a63156` (forty-sixth run's own log
+entry), ~1h37m old at start, clear of the 45-minute collision window.
+`npm install` (same incidental `package-lock.json` `libc`-field diff as
+every prior run, reverted via `git checkout --`, not committed). `npm run
+build` clean — identical 484KB/1017KB main/hero-scene chunk split, same
+chunk-size advisory, no new warnings. `npm run lint` (`oxlint`) clean — same
+6 pre-existing `only-export-components` warnings, no new ones.
+
+**Method:** real Playwright pass against a production `vite preview` build
+(global `playwright` via `require.resolve` against
+`/opt/node22/lib/node_modules`, `executablePath` pinned to the pre-installed
+`/opt/pw-browsers/chromium-1194` binary), desktop 1440×900 and mobile
+(`devices['iPhone 13']`), both languages via the confirmed-correct
+`aria-label="Toggle language"` selector (forty-sixth run's fix), 6s
+post-toggle settle wait, natural incremental-scroll (`mouse.wheel`, not
+scroll-then-jump) full pass before capture. Zero console errors and zero
+failed network requests across all four language/viewport combinations.
+Language toggle confirmed correct in both directions via
+`document.documentElement.lang` read-back (no repeat of the forty-sixth
+run's own selector bug).
+
+**New finding, investigated in depth, concluded environment-only — not a
+site defect, no code touched:** the mobile-viewport overflow check
+(`scrollWidth` vs `clientWidth`) came back 398/390 (8px) on both languages,
+where the forty-sixth run recorded a clean 390/390. Chased this all the way
+rather than waving it through, since it contradicted the immediately
+preceding run:
+- `window.innerWidth` (398) vs `document.documentElement.clientWidth` (390)
+  — an 8px gap that does not exist on desktop (1440/1440/1440, `dpr:1`) —
+  pointing at a scrollbar-gutter/viewport-metrics quirk specific to this
+  sandbox's mobile-emulation path (`dpr:3`, touch), not a CSS bug.
+- Full ancestor-chain inspection from `<h1>` up to `<html>` (rect,
+  `clip-path`, `mask`, `transform`, `overflow` at every level) showed
+  **fully correct layout geometry** — `<h1>` centered at 32–374 of a
+  390px-wide box, no clip-path, no mask, no transform anywhere in the
+  chain. The DOM/CSS layout itself is not broken.
+- Yet the actual rendered PNG (both `page.screenshot()` and per-element
+  `locator.screenshot()`) showed hero content visually compressed into
+  roughly the left third of the frame with a large blank region beyond it
+  — a real mismatch between correct layout geometry and what got painted.
+  Confirmed pixel-level via a direct crop/read of the screenshot, not just
+  a coarse color-distance scan (the first pass at that undersold how
+  visually obvious the compressed region was).
+- Ruled out the WebGL/3D hero scene as the cause: hiding all `<canvas>`
+  elements before capture reproduced the identical compressed-content
+  screenshot, unchanged.
+- Ruled out a general Playwright/harness issue: the same build, same
+  session, same script family, captured **correctly** on desktop
+  (1440×900, `dpr:1`, no touch emulation) — full-width, centered, `+80`
+  stat fully counted, exam-light 3D centerpiece rendered cleanly, no
+  compression artifact at all.
+- Conclusion: this is a rendering/rasterization mismatch specific to this
+  sandbox's software-rendered Chromium under **mobile device emulation**
+  (touch + `dpr:3` + viewport override) — the emulated device's logical
+  viewport size is not being honored by the actual paint/screenshot
+  surface, even though the page's real DOM/CSS layout is computed correctly
+  for it. This is a new, concrete, independently-reproduced data point for
+  the standing mobile-glow item's own diagnosis (real-device or
+  non-software-rendered-browser access needed to trust *any* mobile visual
+  capture from this environment) — it broadens that conclusion from "the
+  glow effect specifically" to "full-page mobile screenshot capture in this
+  sandbox is not visually trustworthy," not a new standalone defect. No
+  application code branches on mobile/touch state anywhere relevant to this
+  (confirmed again this run, consistent with prior runs' findings), so
+  there is nothing in the codebase to fix — the mismatch lives entirely in
+  the emulation/rasterization layer between Chromium's device-metrics
+  override and its software (SwiftShader) painter.
+- **Practical effect on this run's methodology, noted for future runs:**
+  given the above, this run treated mobile-viewport *visual* screenshots as
+  unreliable evidence and fell back to direct DOM/text assertions
+  (`document.documentElement.lang`/`dir`, `body.innerText` regex checks for
+  the pricing range/50%/24h/contact email, direct source reads of
+  `portfolio-data.ts` and `site-footer.tsx`) to verify mobile-relevant
+  content and RTL correctness instead of trusting mobile pixel captures.
+  Desktop screenshots (both languages) were captured and visually reviewed
+  normally, since desktop capture in this sandbox is confirmed reliable.
+
+**Full pass, evidence gathered this run:** desktop EN/AR full scroll-through
+clean, zero console errors, zero failed requests, `1440/1440` overflow
+clean both languages. Desktop pricing section screenshot confirms
+`$3,000 - $10,000` / "50% to start" / "50% before delivery" / "Live in
+under 24h" exactly as specified. Desktop contact section screenshot
+confirms `contact@zaylogear.com` and the WhatsApp number, "Book a Call"
+CTA, no fabricated trust signals. `document.body.innerText` regex checks
+(EN) independently confirmed the same pricing/deposit/turnaround/contact
+figures present in the live DOM. `portfolio-data.ts` re-read directly —
+`greendent`/`bently`/`lavida` slugs, no real client names, unchanged.
+`site-footer.tsx`'s `LEGAL_ENTITY = 'ZYL Commerce LLC'` re-read directly —
+unchanged since the forty-fourth run's flag, still open, still needs
+Aymean's explicit confirmation, not re-litigated further this run. Niche
+framing not re-narrowed (not specifically re-screenshotted this run beyond
+the pricing/contact sections above, but no code touched anything
+niche-related, and the forty-sixth run's confirmation stands).
+
+**Not touched this run, deliberately:** hero-delay (~7s) — still blocked on
+Aymean's creative-pacing decision, no new angle. Mobile-only hero-glow gap
+— still blocked on real-device/non-software-rendered-browser access; this
+run's finding above is new *evidence supporting* that same standing
+conclusion, not a new angle that changes what's needed to resolve it.
+Dialog-dismiss timing — already thoroughly investigated across multiple
+runs, not reopened. Footer legal-entity name — standing open flag, unchanged,
+Aymean's call.
+
+**No site code changes this run.** Every avenue chased this run — the new
+overflow discrepancy included — traced back to either an already-settled
+standing item, a sandbox rendering/emulation limitation with no
+corresponding code defect, or confirmed-correct existing behavior. A clean
+no-op pass on the code side.
+
+**STATUS: NOT YET READY TO DEPLOY.** Build/lint clean, zero console errors,
+zero failed network requests, desktop bilingual visual pass clean, mobile
+content/RTL verified via DOM rather than pixel capture this run (see
+methodology note above) with no discrepancies found. No fabricated content,
+no spec regressions. Three items remain blocked exactly as before:
+mobile-glow (real-device/non-software-rendered-browser access — this run's
+finding broadens rather than resolves this), dialog-dismiss timing (same),
+hero-delay (Aymean's creative-pacing call). One open content flag carried
+forward unchanged: the footer's "ZYL Commerce LLC" directing-entity claim
+still needs Aymean's explicit yes/no. Nothing new is blocking deploy on
+craft/QA grounds beyond the standing list — the deploy-readiness call
+remains Aymean's, pending the footer-entity confirmation and his own
+creative-pacing/device-testing input on the two other standing items.
