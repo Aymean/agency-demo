@@ -3306,3 +3306,146 @@ with access to a real browser/device should re-test the backdrop-click
 case specifically before ruling either way. Aymean's call on whether the
 low-impact nature of this finding (Escape and the X button both always
 work) is acceptable to ship around, same as the mobile-glow gap.
+
+---
+
+## 2026-09-05 — thirty-eighth run, audit-only; broadened the backdrop-click finding — dismiss flakiness is not backdrop-specific, but no dismiss method ever failed twice in a row
+
+`git pull origin master` — up to date at `a926b35`, ~99 minutes old at
+start, clear of the 45-minute collision window. Branch was attached and
+clean this time (no detached-HEAD repeat).
+
+**Method:** `npm install` (same incidental `package-lock.json` `libc`-field
+diff as every prior run, reverted, not committed). `npm run build` clean
+(same 484KB/1017KB chunk-size advisory). `npm run lint` clean — same 6
+pre-existing `only-export-components` warnings. No code changes needed
+this run, so build/lint were only run once against unmodified source.
+Real Playwright pass against a production `vite preview` build
+(`/opt/pw-browsers/chromium-1194`, `executablePath` pinned), desktop
+1440px and mobile 390×844 (`isMobile`/`hasTouch`), both languages via the
+in-page toggle. Zero console/page errors across every capture.
+
+**Method note for future runs — `page.screenshot({ fullPage: true })` is
+unreliable on this site and should not be trusted alone:** a first attempt
+at the full visual pass took `fullPage` screenshots immediately after
+toggling language, with no manual scroll pass first, and got back
+near-totally blank captures (hero rendered, everything below it black).
+This is not a site bug — `Reveal`/`RevealGroup`/`ScreenWipe`'s
+`whileInView` reveals need the browser to actually pass through
+intermediate scroll positions to fire their `IntersectionObserver`s, and a
+stitched `fullPage` capture does not reliably do that. Manually stepping
+through the page in ~300px increments with short waits before capturing
+fixed it completely (confirmed both languages, both viewports, full
+correct content: copy, pricing, portfolio mix, contact block, footer, all
+matching the thirty-seventh run's confirmed-good state). A related
+transient false-positive: an intermediate re-check of the mobile portfolio
+touch-reveal (`.card-static` clip-path) once showed one card's overlay
+"stuck" at inset(0%) after a language toggle — chasing it down showed this
+was purely about which cards had actually scrolled through the
+viewport in that particular test pass (skip-scrolling via
+`scrollIntoViewIfNeeded()` jumps past intermediate elements without
+letting their observers fire, same root cause as the fullPage issue
+above); re-run with a proper gradual scroll and with `elementFromPoint`/
+clip-path assertions, all 3 cards reveal correctly and consistently in
+both languages, before and after any number of toggles. Not a bug, not
+re-flagging.
+
+**Full visual pass, both languages, both viewports** (hero, process,
+work/portfolio, pricing, contact — about still deliberately empty):
+copy, layout, 3D exam-light centerpiece, 3 anonymized portfolio cards
+(dental/dental/aesthetic — unchanged mix), pricing figures
+($3,000-$10,000 / 50% to start / 50% before delivery / <24h), contact
+block (`contact@zaylogear.com`, WhatsApp `+966 57 351 3946`), footer — all
+correct in both languages, once captured with the corrected scroll
+methodology above. Overflow: desktop 1440/1440 both languages (clean).
+Mobile: measured 390/390 (clean) this run when checked after a full
+gradual scroll-through — the 398/390 residual documented since the
+thirty-third run is still scroll-position-dependent/transient as already
+noted by the thirty-sixth run, not re-investigating further, not newly
+regressed.
+
+**Portfolio dialog dismiss — followed up on the thirty-seventh run's
+backdrop-click finding with one new, falsifiable angle, and it changed the
+picture:**
+
+1. Tested whether the backdrop-click failure correlates with how soon
+   after opening the click lands (hypothesis: a dismiss-listener-attach
+   race — the click succeeding only if it happens outside some short
+   window after open). Result: **no correlation.** Delays of 50ms, 150ms,
+   400ms, 800ms, and 1500ms before the backdrop click all produced roughly
+   the same ~40-60% close-failure rate (6 trials each). This specific
+   hypothesis is ruled out.
+2. While building a cleaner isolated test of the thirty-seventh run's
+   claim that "Escape and the X button both close the dialog reliably on
+   every attempt," that claim did not hold up under this run's retesting.
+   A batch of 4 fresh-page trials with a single fixed 1000ms wait after
+   clicking the visible close (X) button showed **4 of 4 stayed open**;
+   an otherwise-equivalent test that polled the DOM every 150ms instead of
+   waiting once showed the opposite, 3 of 3 closing cleanly within
+   300-600ms. Escape showed the same pattern under the same two test
+   shapes. This inconsistency — same app, same action, opposite outcomes
+   depending on unrelated test-harness structure — points at main-thread
+   timing sensitivity in this sandboxed/software-WebGL environment (the
+   hero's 3D scene is already falling back to software rendering here,
+   logged as a Chromium warning on every run) rather than a clean,
+   deterministic app defect, and is the same category of "can't fully
+   trust this environment's timing" caveat already on file for the
+   mobile-glow item.
+3. Given that, re-ran all three dismiss methods (X button, Escape,
+   backdrop click) with up to 3 retry attempts per trial, 1000ms settle
+   time between attempts, fresh page per trial (8 trials per method
+   total across two batches): **every single trial across all three
+   methods closed within 1-2 attempts. Zero trials needed a third attempt,
+   zero trials failed outright.**
+
+**Conclusion, updating rather than replacing the thirty-seventh run's
+finding:** the intermittent dismiss behavior is not specific to
+backdrop-clicks — Escape and the X button show the same first-attempt
+flakiness under this run's testing, so the thirty-seventh run's "Escape
+and X button always work" claim was too strong and should not be relied
+upon as written. The practical-impact conclusion is unchanged and still
+holds, now on stronger evidence rather than an assumption: no dismiss
+method ever left the dialog stuck across 20+ trials this run — worst case
+observed was one extra press. Still not attempting a blind patch to
+third-party dismiss internals (`@base-ui/react` `useDismiss`) — the
+evidence now points more toward an environment/timing artifact than an
+app-code bug, which makes a code change less justified, not more. Real
+device/non-software-rendered-browser access remains the only way to fully
+settle whether any of this reproduces for an actual user; recommend a
+future run with that access re-test specifically this way: open the
+dialog, dismiss with each method once, and confirm it always closes on
+the first try on real hardware.
+
+**Untouched, per standing rules:** `portfolio-data.ts` (all 3 entries
+still anonymized, no real client names, confirmed by source read this
+run), pricing figures (confirmed both languages), About section (still
+deliberately empty, correct), contact email (confirmed correct,
+unchanged). No manual commits from Aymean landed between the
+thirty-seventh run and this one.
+
+**Not touched this run, deliberately:** hero-delay (resolved by Aymean
+directly, thirty-fourth run) — confirmed the intro still resolves quickly
+(well under the originally-flagged ~7s) via a fresh timing check, nothing
+further to check. Mobile emitter-glow/sparkle question — still blocked on
+a real device or non-software-rendered browser, no new angle this run.
+
+**No code changes this run.** All investigation this run was diagnostic;
+nothing rose to a fix that could be made safely and confidently from
+application code alone.
+
+**STATUS: NOT YET READY TO DEPLOY.** No console errors, no spec
+regressions, no fabricated content, build/lint clean, full bilingual/
+responsive visual pass clean (once captured correctly — see method note
+above). The dialog-dismiss finding from the thirty-seventh run is not
+resolved but is better understood: it's broader (affects all three
+dismiss methods, not just backdrop-click) and lower-risk than it first
+looked (no method ever failed twice in a row across 20+ trials this run),
+and increasingly looks like a sandboxed-environment timing artifact rather
+than a real app defect, though that still can't be fully confirmed without
+real-device access. Two items remain blocked on real-device/non-software-
+rendered-browser access: mobile-glow and dialog-dismiss timing. Both
+previously-resolved items (hero-delay, portfolio/niche mismatch) remain
+resolved. As before: if Aymean is satisfied with the 3-card portfolio and
+accepts these two real-device-only unknowns as known, low-impact gaps,
+there may not be much left to block a deploy decision on craft/QA
+grounds — that call remains his, not this loop's.
