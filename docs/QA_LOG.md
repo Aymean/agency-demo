@@ -3449,3 +3449,137 @@ resolved. As before: if Aymean is satisfied with the 3-card portfolio and
 accepts these two real-device-only unknowns as known, low-impact gaps,
 there may not be much left to block a deploy decision on craft/QA
 grounds — that call remains his, not this loop's.
+
+---
+
+## 2026-09-05 — thirty-ninth run, audit-only; no new bugs, one new methodology gotcha documented
+
+Resuming after the account interruption mentioned in the dispatch (this loop
+completed 32 runs 2026-09-02–03 before stopping; the log shows six more,
+thirty-third through thirty-eighth, already landed since). Same mandate, no
+project changes to the loop itself.
+
+`git pull origin master` — up to date at `3b5213d`, ~92 minutes old at start
+(`2026-09-05T02:44:18Z` vs. `date -u` → `2026-09-05T04:16:11Z`), clear of the
+45-minute collision window. Branch was attached and clean (no detached-HEAD
+repeat this time). Re-fetched again after finishing the full audit, right
+before writing this entry — still `3b5213d`, no concurrent commits landed
+mid-run.
+
+**Method:** `npm install` (same incidental `package-lock.json` `libc`-field
+diff every run sees, reverted via `git checkout -- package-lock.json`, not
+committed). `npm run build` clean — identical 484KB/1017KB main/hero-scene
+chunk split and chunk-size advisory, no new warnings. `npm run lint` clean —
+same 6 pre-existing `only-export-components` warnings, no new ones. Real
+Playwright pass against a production `vite preview` build (global `playwright`
+CLI install resolved via `require.resolve('playwright', {paths:
+['/opt/node22/lib/node_modules']})`, since this checkout has no local
+`playwright` devDependency; `executablePath` pinned to
+`/opt/pw-browsers/chromium-1194/chrome-linux/chrome` as in every prior run),
+desktop 1440×900 and mobile 390×844 (`isMobile`/`hasTouch` set), both
+languages via the in-page toggle. Zero console/page errors across every
+capture.
+
+**New methodology gotcha this run, not a site bug — flagging so a future run
+doesn't misdiagnose it:** `elementHandle.screenshot()` on a section taller
+than the viewport (e.g. `#work` on mobile, which holds 3 full-height
+portfolio cards) has Playwright internally scroll-and-stitch multiple
+viewport-height tiles together. This site's header is `position: fixed`
+(confirmed via `getComputedStyle`), so the fixed header gets captured at its
+on-screen position in *every* stitched tile — producing a ghost duplicate of
+the header/language-toggle pasted into the middle of the stitched image,
+overlapping body copy that in the real, live-scrolled page it never actually
+overlaps. Caught this because a first-pass capture of `#work` (mobile, EN)
+appeared to show the "AR" toggle pill overlapping the section's intro
+paragraph. Verified it was purely a stitching artifact, not a real layout
+bug, three ways: (1) the toggle's own computed `position` is `static`, only
+an ancestor is fixed; (2) a plain `window.scrollTo` to that exact scroll
+offset followed by a normal (non-element, non-fullPage) viewport screenshot
+shows the sticky header sitting cleanly above the paragraph with no overlap
+at all; (3) this is the same underlying category as the thirty-fifth run's
+documented `fullPage: true` WebGL-blanking artifact and the thirty-eighth
+run's `scrollIntoViewIfNeeded()`-skips-intermediate-scroll-positions
+artifact — Playwright's automated multi-shot stitching does not always
+reproduce what a real scrolling user sees. **Takeaway for future runs:**
+don't trust `elementHandle.screenshot()` on any section taller than one
+viewport on a page with a fixed/sticky header; use manual `scrollTo` +
+viewport `page.screenshot()` per scroll position instead (as the
+thirty-eighth run's segment-capture method already does for full-page
+passes) if verifying a tall section in detail.
+
+**Same root cause also explained an isolated hero-object miss this run:** an
+early capture of the desktop Arabic-default hero appeared to show the 3D
+exam-light object missing entirely (present in the equivalent English
+capture from the same batch), which would have been a serious new
+RTL-specific regression if real. Re-tested directly three ways: (1) three
+independent fresh page loads, no language toggle at all (pure AR-default
+cold start), each confirmed the canvas element present with correct
+dimensions and the exam-light object visibly rendered in the screenshot; (2)
+replayed the exact scroll-through-the-whole-page-then-back-to-top sequence
+this run's audit script uses before capturing `#top`, and the object still
+rendered correctly on replay; (3) zero console/page errors in any of these
+traces. Conclusion: the original blank capture was a one-off, non-reproducing
+capture miss on the WebGL canvas (same general class of flakiness already on
+file for full-page/stitched captures on this site), not a real RTL rendering
+bug. Not filing this as a new finding — flagging only so a future run that
+sees a single blank-hero capture doesn't jump straight to "RTL regression"
+without a same-language retest first.
+
+**Full visual pass, both languages, both viewports, verified via the
+corrected methodology above where a tall section was involved** (hero,
+process, work/portfolio, pricing, contact — about still deliberately empty):
+copy, layout, 3D exam-light centerpiece, 3 anonymized portfolio cards
+(dental/dental/aesthetic — unchanged mix, slugs/labels/hooks re-read from
+`portfolio-data.ts` directly, no real client names anywhere), pricing figures
+($3,000-$10,000 / 50% to start / 50% before delivery / <24h) correct both
+languages, contact block (`contact@zaylogear.com`, WhatsApp
+`+966 57 351 3946` still rendering LTR inside RTL context) correct, footer.
+Overflow: desktop 1440/1440 both languages (clean). Mobile: 390/390 both
+languages this run (clean) — the transient 398/390 residual documented since
+the thirty-third run was not observed this run, consistent with the
+thirty-sixth run's note that it's scroll-position/timing-dependent rather
+than a fixed regression; not re-chasing further.
+
+**Interaction spot-check (not a full re-investigation of the dialog-dismiss
+item — no new angle to justify one):** portfolio dialog opened correctly via
+its `[data-cursor="view"]` trigger; a single Escape-close attempt in this
+run's spot-check did not close it on the first press (dialog still present
+~600ms later) — consistent with, not contradicting, the thirty-seventh/
+eighth runs' already-logged finding that all three dismiss methods show
+first-attempt flakiness in this sandboxed environment without ever getting
+permanently stuck. Did not run a full multi-trial batch again; that
+investigation is already thorough and blocked on the same real-device
+question already on file. No dead hover states or stuck cursor chips found
+elsewhere (checked via `:hover`-match probing after moving the pointer off
+interactive elements).
+
+**Untouched, per standing rules:** `portfolio-data.ts` (all 3 entries
+confirmed anonymized by direct source read — labels/hooks/descriptors carry
+no real client names; internal `slug` values like `greendent`/`bently`/
+`lavida` are not rendered anywhere in the UI, same as every prior run's
+finding), pricing figures (confirmed both languages), About section (still
+deliberately empty, correct — no placeholder content added), contact email
+(confirmed correct, unchanged).
+
+**Not touched this run, deliberately:** hero-delay (resolved by Aymean
+directly, thirty-fourth run) — intro still resolves quickly, nothing further
+to check. Mobile emitter-glow/sparkle question — still blocked on a real
+device or non-software-rendered browser, no new angle this run. Dialog-
+dismiss timing — already thoroughly investigated (thirty-seventh/eighth
+runs), this run's single spot-check is consistent with the existing finding,
+not a reason to re-open a full investigation without new information.
+
+**No code changes this run.** Every apparent anomaly this run traced back to
+a test-capture artifact (documented above for future runs' benefit), not a
+real site defect — a clean no-op pass on the code side.
+
+**STATUS: NOT YET READY TO DEPLOY.** No console errors, no spec regressions,
+no fabricated content, build/lint clean, full bilingual/responsive visual
+pass clean once captured correctly. Two items remain blocked on real-device/
+non-software-rendered-browser access: mobile-glow and dialog-dismiss timing
+(unchanged, not re-investigated further this run beyond one consistent
+spot-check). Both previously-resolved items (hero-delay, portfolio/niche
+mismatch) remain resolved. As before: if Aymean is satisfied with the 3-card
+portfolio and accepts these two real-device-only unknowns as known,
+low-impact gaps, there may not be much left to block a deploy decision on
+craft/QA grounds — that call remains his, not this loop's.
