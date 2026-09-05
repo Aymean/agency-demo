@@ -4173,3 +4173,95 @@ run: the footer's "ZYL Commerce LLC" directing-entity claim needs Aymean's
 explicit confirmation that it's real and correct before this counts as
 settled — everything else audited this pass held up against the brief and
 the reference docs with no new craft-bar shortfalls.
+
+## 2026-09-05 — forty-fifth run, resumed after account gap, audit-only, no new bugs
+
+`git pull origin master` — up to date at `0e89a3e` (forty-fourth run's own
+log entry), ~1h37m old at start, clear of the 45-minute collision window.
+Resuming the same standing mandate after an account-issue interruption
+(the routine had run 32 consecutive times 2026-09-02 through 2026-09-03
+before this gap) — not a new project, no memory of prior runs beyond what
+this log records, per the usual reset.
+
+**Method:** `npm install` (same incidental `package-lock.json` `libc`-field
+diff as every prior run, reverted, not committed). `npm run build` clean —
+identical 484KB/1017KB main/hero-scene chunk split, same chunk-size
+advisory, no new warnings. `npm run lint` clean — same 6 pre-existing
+`only-export-components` warnings, no new ones. Real Playwright pass
+against a production `vite preview` build (global `playwright` via
+`require.resolve('playwright', {paths: ['/opt/node22/lib/node_modules']})`,
+`executablePath` pinned to `/opt/pw-browsers/chromium-1194/chrome-linux/chrome`),
+desktop 1440×900 and mobile (`devices['iPhone 13']`), both languages
+(default-language detection via `document.documentElement.lang`, toggled
+only when it doesn't match the target, per the forty-fourth run's fix),
+6s post-load wait, full scroll-through before capture, per-section
+screenshots (`#top`/`#about`/`#process`/`#work`/`#pricing`/`#contact`).
+Zero console errors and zero failed network requests across all four
+language/viewport combinations. Overflow (`scrollWidth` vs `clientWidth`)
+clean on all four combinations (1440/1440 desktop, 390/390 mobile).
+
+**Own-script flake caught and ruled out, not a site bug:** the first capture
+pass hit a one-off `elementHandle.screenshot()` timeout on `#contact`
+(desktop-en only, the other three language/viewport combinations captured
+it fine). Re-ran an isolated 3-attempt reproduction against the identical
+desktop-en state (same 6s waits, same scroll-through, same
+`scrollIntoViewIfNeeded` + 700ms settle) — all 3 attempts succeeded, with
+identical `getBoundingClientRect`/computed-style diagnostics each time
+(visible, opacity 1, correct bounding box). Not reproducible — a harness
+timing hiccup, same class as the forty-second run's documented
+fullPage-screenshot/language-toggle race, not a rendering defect.
+
+**Reconfirmed, not re-opened (no new angle, matches existing findings
+exactly):**
+- Mobile pricing-section/fixed-header overlap: measured `getBoundingClientRect`
+  overlap this run was 6.8px (vs. the forty-fourth run's measured ~7px) —
+  same magnitude, same cause (the `Reveal` entrance animation still
+  settling at first sample after a full-scroll-through-then-jump
+  sequence), same conclusion: no visible glyph clipping, no real
+  mobile-nav interaction path reaches this exact scripted boundary. Not
+  a shippable defect, not touched.
+- Dialog-dismiss timing: a fresh spot-check (open a portfolio card dialog,
+  press Escape) found the dialog still open after 500ms but closed within
+  a further ~1-2s. Consistent with the standing, already-thoroughly
+  investigated finding — this run's single spot-check is not grounds to
+  reopen a full investigation.
+- Hero-delay (~7s before content visible) — still blocked on Aymean's own
+  creative-pacing decision, not re-timed this run, no new angle.
+- Mobile-only hero-glow gap — still blocked on real-device/
+  non-software-rendered-browser access, not re-investigated this run, no
+  new angle.
+- About section — still deliberately empty pending Aymean's copy, confirmed
+  correct via the same timeout-on-`aria-hidden`-element screenshot
+  behavior every prior run has seen.
+
+**Untouched, per standing rules, directly re-verified:**
+`portfolio-data.ts` re-read directly — `greendent`/`bently`/`lavida` slugs
+unchanged, no real client names. Pricing figures ($3,000-$10,000 / 50% to
+start / 50% before delivery / <24h) correct both languages, both
+viewports. Contact block (`contact@zaylogear.com`, WhatsApp
+`+966 57 351 3946`) correct. Niche framing broad ("Clinics of Every Kind —
+Saudi Arabia" / متخصصون في مواقع العيادات بكل تخصصاتها), not narrowed.
+RTL parity spot-checked on hero, pricing (desktop) — nav, headline,
+three-column payment-terms breakdown all correctly mirrored, logo/wordmark
+correctly stays `dir="ltr"`. Mobile portfolio cards confirmed showing
+resolved screenshot images directly (touch-tier scroll-triggered reveal),
+no static overlay stuck. `site-footer.tsx`'s `LEGAL_ENTITY = 'ZYL Commerce
+LLC'` line re-read directly — unchanged since the forty-fourth run's flag;
+still open, still needs Aymean's explicit confirmation, not re-litigated
+further this run.
+
+**No code changes this run.** A clean no-op pass — nothing found that
+crosses from "already-known, already-explained" into "new defect."
+
+**STATUS: NOT YET READY TO DEPLOY.** No console errors, no failed network
+requests, no overflow, no spec regressions, no fabricated content,
+build/lint clean, full bilingual/responsive visual pass clean. Three items
+remain blocked exactly as before: mobile-glow and dialog-dismiss timing
+(real-device/non-software-rendered-browser access), hero-delay (Aymean's
+creative-pacing call). One open content flag carried forward unchanged:
+the footer's "ZYL Commerce LLC" directing-entity claim still needs
+Aymean's explicit yes/no. Everything else audited this pass held up
+against the brief and the reference docs with no new craft-bar
+shortfalls — if Aymean is satisfied with the standing known-gaps list and
+confirms (or corrects) the footer entity name, there may not be much left
+blocking a deploy decision on craft/QA grounds; that call remains his.
