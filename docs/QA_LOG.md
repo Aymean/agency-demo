@@ -4265,3 +4265,131 @@ against the brief and the reference docs with no new craft-bar
 shortfalls — if Aymean is satisfied with the standing known-gaps list and
 confirms (or corrects) the footer entity name, there may not be much left
 blocking a deploy decision on craft/QA grounds; that call remains his.
+
+## 2026-09-05 — forty-sixth run, audit-only, no new bugs, own test-script bug found and fixed mid-run
+
+`git pull origin master` — up to date at `4a60bb0` (forty-fifth run's own log
+entry), ~1h48m old at start, clear of the 45-minute collision window.
+
+**Method:** `npm install` (same incidental `package-lock.json` `libc`-field
+diff as every prior run, reverted, not committed). `npm run build` clean —
+identical 484KB/1017KB main/hero-scene chunk split, same chunk-size
+advisory, no new warnings. `npm run lint` (`oxlint`) clean — same 6
+pre-existing `only-export-components` warnings, no new ones. Real Playwright
+pass against a production `vite preview` build (global `playwright` via
+`require.resolve` against `/opt/node22/lib/node_modules`, `executablePath`
+pinned to the pre-installed `/opt/pw-browsers/chromium-1194` binary),
+desktop 1440×900 and mobile (`devices['iPhone 13']`), both languages, 6s
+post-toggle settle wait, full scroll-through before capture, per-section
+screenshots (`#top`/`#about`/`#process`/`#work`/`#pricing`/`#contact`).
+Zero console errors and zero failed network requests across all four
+language/viewport combinations. Overflow (`scrollWidth` vs `clientWidth`)
+clean on all four (1440/1440 desktop, 390/390 mobile).
+
+**Own-script bug caught and fixed before it could produce a false read:**
+the first capture pass's language-toggle logic matched the toggle button by
+substring (`textContent.toUpperCase().includes('EN')`), and the site's own
+logo/wordmark link ("ZAYLO AGENCY") contains the substring "EN" — the script
+was clicking the logo instead of the actual toggle, so the "English" pass
+silently stayed on the site's Arabic default the whole time. Caught because
+both language passes' screenshots came back visually identical (same
+Arabic RTL copy) despite being labeled differently. Fixed by switching the
+selector to the button's `aria-label="Toggle language"` (confirmed via
+direct source read of `site-nav.tsx`) and re-ran the full four-combination
+pass; confirmed via `document.documentElement.lang` read back after toggle
+that both languages now render correctly (English pass showed the Fraunces
+serif LTR headline and "80+" stat; Arabic pass showed the mirrored RTL
+layout) — logging the root cause here so no future run re-suspects the site
+itself for this. No site code was touched to fix this — it was purely a
+bug in this run's own disposable test script.
+
+**Site default language, noted for context, not a bug:** `document.
+documentElement.lang` is `ar` on a fresh load in this environment regardless
+of `navigator.language` (`en-US` here) — i.e. the site defaults to Arabic
+rather than following browser locale. Given the confirmed niche (Saudi
+Arabia clinics) this reads as an intentional business choice, not
+investigated further as a defect since no prior run has flagged it and nothing
+in the brief specifies locale-detection behavior.
+
+**Chased and ruled out, not a site bug (methodology note for future runs):**
+this run's own scroll-through-based capture sequence intermittently missed
+rendering the hero's 3D exam-light object in a handful of individual
+`#top` element-screenshots (both desktop and mobile, both languages, no
+consistent per-language or per-viewport pattern). Investigated directly:
+dedicated 3-attempt reproductions of the exact same sequence (language
+toggle → 6s wait → full scroll-through → scroll-into-view → element
+screenshot) rendered the lamp correctly in all attempts, and a `<canvas>`
+presence/timing probe showed the WebGL canvas is present and stable from
+~4s after load onward with no console errors and no lost WebGL context.
+Conclusion: an intermittent capture/render race specific to this
+scripted, non-standard scroll-then-jump sequence in this software-rendered
+headless environment (this environment's Chromium falls back to software
+WebGL — confirmed via the browser's own "Automatic fallback to software
+WebGL" console warning), not a reproducible site defect. Same class of
+finding as the forty-second and forty-fifth runs' documented harness-only
+capture flakes.
+
+**Mobile pricing-section/fixed-header overlap: re-investigated with a new
+angle, conclusion strengthened, not reopened as a defect.** Prior runs
+measured a small (~6-7px) `getBoundingClientRect` overlap between the fixed
+header and the pricing heading, present only when using this loop's
+scripted full-scroll-through-then-jump capture sequence, and concluded no
+real user path reaches it. This run added a second, more realistic check:
+a natural incremental-scroll simulation (repeated `mouse.wheel` calls
+approximating real user scroll physics, no scroll-then-jump) measured
+**zero overlap** — the pricing heading sits ~2195px down from a ~57px-tall
+header with no scripted-boundary artifact at all. This confirms the
+existing conclusion more strongly than before: the overlap is purely an
+artifact of this loop's own test methodology, never reachable by an actual
+visitor scrolling normally. Not a shippable defect, not touched, no code
+change.
+
+**Full visual pass, both languages, both viewports** (hero, process, work,
+pricing, contact — about still deliberately empty, confirmed via the same
+timeout-on-`aria-hidden`-element behavior every prior run has seen, not a
+new finding): copy, layout, 3D exam-light centerpiece (confirmed rendering
+correctly once the language-toggle bug above was fixed), 3 anonymized
+portfolio cards (`portfolio-data.ts` re-read directly this run —
+`greendent`/`bently`/`lavida` slugs, no real client names, unchanged),
+pricing figures ($3,000-$10,000 / 50% to start / 50% before delivery /
+<24h) correct both languages, contact block (`contact@zaylogear.com`,
+WhatsApp `+966 57 351 3946`) correct, footer `LEGAL_ENTITY = 'ZYL Commerce
+LLC'` line re-read directly — unchanged since the forty-fourth run's flag,
+still open, still needs Aymean's explicit confirmation, not re-litigated
+further. Niche framing reconfirmed broad ("Clinics of Every Kind — Saudi
+Arabia" / متخصصون في مواقع العيادات بكل تخصصاتها), not narrowed. RTL parity
+spot-checked on hero, pricing, contact (desktop and mobile) — nav, headline,
+payment-terms breakdown, numbered process rail all correctly mirrored,
+logo/wordmark correctly stays `dir="ltr"`.
+
+**Not touched this run, deliberately:** hero-delay (~7s) — no new angle,
+still blocked on Aymean's own creative-pacing decision. Mobile-only
+hero-glow/sparkle gap — still blocked on a real device or
+non-software-rendered browser, no new angle (this run's software-WebGL
+confirmation above is about the unrelated intermittent capture-flake
+finding, not a new angle on the standing glow investigation). Dialog-dismiss
+timing — already thoroughly investigated across multiple runs, not
+re-opened here. No-mobile-nav-drawer — reconfirmed as a considered,
+non-blocking choice (no "Pricing"/"Work" text nav links exist on the mobile
+viewport to click, by design).
+
+**No site code changes this run.** Every finding chased down this run
+traced back to either an already-settled standing item or a bug in this
+run's own disposable test script (found, root-caused, and fixed within the
+run, not committed anywhere since it never touched the repo). A clean no-op
+pass on the code side.
+
+**STATUS: NOT YET READY TO DEPLOY.** No console errors, no failed network
+requests, no overflow, no spec regressions, no fabricated content,
+build/lint clean, full bilingual/responsive visual pass clean (after fixing
+this run's own language-toggle test bug). Three items remain blocked
+exactly as before: mobile-glow and dialog-dismiss timing
+(real-device/non-software-rendered-browser access), hero-delay (Aymean's
+creative-pacing call). One open content flag carried forward unchanged: the
+footer's "ZYL Commerce LLC" directing-entity claim still needs Aymean's
+explicit yes/no. Everything else audited this pass held up against the
+brief and the reference docs with no new craft-bar shortfalls — the
+craft/QA-side blocker list is unchanged from the forty-fifth run; the
+deploy-readiness call remains Aymean's, pending the footer-entity
+confirmation and his own creative-pacing/device-testing input on the two
+other standing items.
