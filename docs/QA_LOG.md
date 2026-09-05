@@ -3583,3 +3583,109 @@ mismatch) remain resolved. As before: if Aymean is satisfied with the 3-card
 portfolio and accepts these two real-device-only unknowns as known,
 low-impact gaps, there may not be much left to block a deploy decision on
 craft/QA grounds — that call remains his, not this loop's.
+
+---
+
+## 2026-09-05 — fortieth run, audit-only; no new bugs, one test-methodology false alarm chased down and ruled out
+
+`git pull origin master` — up to date at `8a169df` (thirty-ninth run's own log
+entry), ~1h47m old at start, clear of the 45-minute collision window.
+
+**Method:** `npm install` (same incidental `package-lock.json` `libc`-field
+diff, reverted, not committed). `npm run build` clean — identical 484KB/
+1017KB main/hero-scene chunk split, same chunk-size advisory, no new
+warnings. `npm run lint` clean — same 6 pre-existing `only-export-components`
+warnings, no new ones. Real Playwright pass against a production
+`vite preview` build (global `playwright` via
+`require.resolve('playwright', {paths: ['/opt/node22/lib/node_modules']})`,
+`executablePath` pinned to `/opt/pw-browsers/chromium-1194/chrome-linux/chrome`),
+desktop 1440×900 and mobile (`devices['iPhone 13']`), both languages via the
+in-page toggle (`[aria-label="Toggle language"]` — confirmed this is the
+correct, reliable selector; a first draft of this run's own script guessed at
+text-based selectors instead and silently failed to toggle at all, which
+would have made every "EN" capture actually be a second AR capture — caught
+and fixed before drawing any conclusions from it). Zero console/page errors
+across every capture, both languages, both viewports.
+
+**One apparent finding chased down and ruled out — a hero-stat-counter
+"stuck at 47+"/"0+" reading after a language toggle.** First looked like a
+real regression against the third run's fixed elapsed-time counter logic.
+Root-caused with a dedicated instrumented test (polling the rendered stat
+text every 500ms): the counter behaves correctly — it consistently reaches
+`80+` roughly 2-2.5s after a fresh mount, both on initial load and after a
+language toggle. The "stuck at 47+" capture in this run's own script
+happened only because the script toggled language while scrolled down to
+the Contact section (bottom of page), then scrolled back to the hero and
+screenshotted only ~800ms later. `use-count-up.ts` gates on Motion's
+`useInView({ once: true })`, and the whole hero remounts on language toggle
+(the documented `key={dir}` remount from the third run) — so a remounted
+counter that starts off-screen doesn't begin counting until it's scrolled
+back into view, and 800ms isn't enough time after that for it to reach 80.
+This is a direct, expected consequence of the already-documented, accepted
+`key={dir}` remount tradeoff ("blocks currently on screen replay their
+reveal") — not a new bug, and not re-flagging it as one. Confirmed via the
+instrumented test that a toggle performed while the hero is already in view
+settles to `80+` in ~2.5s every time, consistent with the third run's fix.
+
+**Also chased down, before ruling it out: an apparent duplicate "0+" stat
+rendering near the fixed mobile header in a scrolled/mid-animation capture.**
+Turned out to be a misreading of a single, tall (390×664 logical, 3x device
+scale) viewport screenshot displayed at reduced size — a bounding-box check
+(`getBoundingClientRect` on the header and on the stat element) confirmed
+only one `"0+"` element exists in the DOM, positioned at `top: 604px`,
+nowhere near the fixed header (`top: 0, bottom: 57px`). No overlap, no
+duplicate element. Noting this only so a future run that sees what looks
+like a floating duplicate stat in a mobile capture checks bounding boxes
+before treating it as a layout bug.
+
+**Full visual pass, both languages, both viewports** (hero, work/portfolio,
+pricing, contact — about still deliberately empty): copy, layout, 3D
+exam-light centerpiece (canvas element appears ~4.9s after a cold
+`domcontentloaded` on this build, consistent with "well under the
+originally-flagged ~7s" per the thirty-fourth run's fix, not re-litigating
+further), 3 anonymized portfolio cards (`portfolio-data.ts` re-read directly
+this run — `greendent`/`bently`/`lavida` slugs, no real client names
+anywhere, dental/dental/aesthetic mix unchanged), pricing figures
+($3,000-$10,000 / 50% to start / 50% before delivery / <24h) correct both
+languages, contact block (`contact@zaylogear.com`, WhatsApp
+`+966 57 351 3946`) correct, footer. Overflow: desktop 1440/1440 both
+languages (clean). Mobile: 390/390 in Arabic (default), 398/390 in English
+after toggle — this is the same transient residual documented since the
+thirty-third run (scroll-position/timing-dependent per the thirty-sixth
+run's note), observed again this run but not a new or worsening finding.
+
+**Portfolio dialog spot-check:** opened via `[data-cursor="view"]`, closed on
+a single Escape press within 700ms this run — consistent with (not
+contradicting) the thirty-seventh/eighth runs' finding that dismiss timing is
+intermittently flaky in this sandboxed/software-WebGL environment; this
+run's single trial just happened to land on the fast side. Did not re-run a
+full multi-trial batch — already thoroughly investigated and blocked on
+real-device access, no new angle this run.
+
+**Untouched, per standing rules:** `portfolio-data.ts` anonymization
+(confirmed by direct source read), pricing figures (confirmed both
+languages), About section (still deliberately empty, correct), contact email
+(confirmed correct, unchanged).
+
+**Not touched this run, deliberately:** hero-delay (resolved by Aymean
+directly, thirty-fourth run) — reconfirmed via the ~4.9s canvas-appearance
+measurement above, nothing further to check. Mobile emitter-glow/sparkle
+question — still blocked on a real device or non-software-rendered browser,
+no new angle this run. Dialog-dismiss timing — already thoroughly
+investigated, this run's single spot-check is consistent with the existing
+finding, not a reason to re-open a full investigation.
+
+**No code changes this run.** Both apparent anomalies this run traced back to
+test-script/methodology mistakes on this run's own part (documented above so
+a future run doesn't repeat them), not real site defects — a clean no-op
+pass on the code side.
+
+**STATUS: NOT YET READY TO DEPLOY.** No console errors, no spec regressions,
+no fabricated content, build/lint clean, full bilingual/responsive visual
+pass clean. Two items remain blocked on real-device/non-software-rendered-
+browser access: mobile-glow and dialog-dismiss timing (unchanged). Both
+previously-resolved items (hero-delay, portfolio/niche mismatch) remain
+resolved. As before: if Aymean is satisfied with the 3-card portfolio and
+accepts these two real-device-only unknowns as known, low-impact gaps, there
+may not be much left to block a deploy decision on craft/QA grounds — that
+call remains his, not this loop's.
