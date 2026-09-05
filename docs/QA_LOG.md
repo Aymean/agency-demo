@@ -4049,3 +4049,127 @@ unknowns, the hero-delay timing range, and the no-mobile-nav-drawer choice
 as known, low-impact/deliberate gaps, there may not be much left to block a
 deploy decision on craft/QA grounds — that call remains his, not this
 loop's.
+
+## 2026-09-05 — forty-fourth run, one new flag (footer legal-entity name), no code bugs
+
+`git pull origin master` — up to date at `7c1b3eb` (forty-third run's own
+log entry), ~1h52m old at start, clear of the 45-minute collision window.
+Same standing mandate, not a new project.
+
+**Method:** `npm install` (same incidental `package-lock.json` `libc`-field
+diff as every prior run, reverted, not committed). `npm run build` clean —
+identical 484KB/1017KB main/hero-scene chunk split, same chunk-size
+advisory, no new warnings. `npm run lint` clean — same 6 pre-existing
+`only-export-components` warnings, no new ones. Real Playwright pass
+against a production `vite preview` build (global `playwright` via
+`require.resolve('playwright', {paths: ['/opt/node22/lib/node_modules']})`,
+`executablePath` pinned to `/opt/pw-browsers/chromium-1194/chrome-linux/chrome`),
+desktop 1440×900 and mobile (`devices['iPhone 13']`), both languages,
+6s post-load wait before interaction (per forty-third run's finding), full
+scroll-through before capture. Zero console errors and zero failed network
+requests across every capture, both languages, both viewports. Overflow
+(`scrollWidth` vs `clientWidth`) clean on all four combinations this run
+(1440/1440 desktop, 390/390 mobile) — the historical transient mobile
+residual did not reproduce.
+
+**Own-script bug caught before it produced a false finding (not a site
+bug):** the capture script only clicked the language toggle for the `ar`
+case, silently assuming default language is English. It is not —
+`i18n.tsx:222` defaults to `useState<Lang>('ar')`. Both the "desktop-en"
+and "desktop-ar" first-draft captures were actually Arabic. Fixed by
+reading `document.documentElement.lang` and toggling only when it doesn't
+match the target, with a hard assertion after the toggle. Re-ran the full
+capture; all four language/viewport combinations verified correct via the
+`lang` attribute, not just visually.
+
+**New flag, needs Aymean's confirmation, not a code bug:** the footer
+(`site-footer.tsx:4`) hardcodes `LEGAL_ENTITY = 'ZYL Commerce LLC'`,
+rendered as "Zaylo Agency is directed by ZYL Commerce LLC" / "©
+2026 ZYL Commerce LLC. All rights reserved." in both languages (RTL
+parity confirmed correct, entity name correctly kept `dir="ltr"` inside
+the Arabic line). The ninth run already looked at this exact line and
+confirmed the copyright year isn't stale — but did not address whether
+"ZYL Commerce LLC" is a real registered entity. This run has no way to
+verify that independently, and the standing no-fabricated-content rule
+reads as squarely covering a claimed legal/directing entity, so flagging
+for Aymean to confirm or correct rather than guessing. Not touching the
+code — the correct value (or confirmation that this one is correct) is his
+call, not this loop's.
+
+**Investigated and cleared, not a real bug:** a first-draft mobile capture
+of the pricing section (`el.screenshot()` on `#pricing` after a full
+scroll-through pass, 500ms settle) showed the fixed header visually
+abutting/technically overlapping the "It depends on the website you want."
+heading (`getBoundingClientRect` math: heading top 50px vs. header bottom
+57px — a 7px technical overlap). Chased this down with three separate
+checks: (1) a real nav-click interaction on desktop (`scrollToId` →
+native `scrollIntoView`) settles with a healthy ~66px gap, no overlap; (2)
+a direct `scrollIntoView` on mobile without the preceding full-scroll-through
+settles at a 7px gap, no overlap, and the gap is still shrinking from an
+animated `Reveal` entrance (96px → 81px → 66px → 64px over ~500ms) when
+first sampled, meaning the apparent tightness is that animation still
+settling, not a static layout defect; (3) reproducing the exact original
+sequence (full scroll-through, then jump straight to `#pricing`, 500ms
+wait) does reproduce the 7px technical overlap by the numbers, but the
+screenshot at that exact moment shows no visible glyph clipping — the
+heading's own line-height whitespace absorbs it. Mobile has no nav link
+that would ever land a real user exactly on this pixel boundary (no mobile
+nav drawer, per the forty-first run's already-accepted finding), so this
+combination isn't reachable by an actual visitor. Logging the full chase
+so a future run doesn't re-spend time on it: this is a sub-visible,
+scripted-exact-boundary-only artifact, not a shippable defect, and not
+worth a `scroll-margin-top` defensive fix for a interaction path that
+doesn't exist yet.
+
+**Hover-reveal spot-check:** portfolio card `ScreenWipe` static-to-reveal
+hover effect re-verified with a real hover + before/after screenshot pair
+on desktop — resolves cleanly to the real screenshot under the "VIEW"
+cursor label, matching the eighth run's original verification. Touch-tier
+(mobile) scroll-triggered reveal also confirmed showing resolved images
+directly in the mobile captures, no static overlay stuck.
+
+**Full visual pass, both languages, both viewports** (hero, process, work,
+pricing, contact — about still deliberately empty, confirmed via the same
+timeout-on-`aria-hidden`-element behavior every prior run has seen, not a
+new finding): copy, layout, 3D exam-light centerpiece, 3 anonymized
+portfolio cards (`portfolio-data.ts` re-read directly this run —
+`greendent`/`bently`/`lavida` slugs, no real client names, dental/dental/
+aesthetic mix, generic "Gulf ..." location labels, unchanged), pricing
+figures ($3,000-$10,000 / 50% to start / 50% before delivery / <24h)
+correct both languages, contact block (`contact@zaylogear.com`, WhatsApp
+`+966 57 351 3946`) correct, footer tagline/legal line (content question
+flagged above, RTL layout itself correct). Niche framing reconfirmed broad
+("Clinics of Every Kind — Saudi Arabia" / متخصصون في مواقع العيادات بكل
+تخصصاتها), not narrowed.
+
+**Untouched, per standing rules:** `portfolio-data.ts` anonymization
+(confirmed by direct source read), pricing figures (confirmed both
+languages), About section (still deliberately empty, correct), contact
+email (confirmed correct, unchanged), no-mobile-nav-drawer (considered,
+non-blocking per forty-first run).
+
+**Not touched this run, deliberately:** hero-delay — no new angle, still
+blocked on Aymean's creative-pacing decision. Mobile emitter-glow/sparkle
+— still blocked on a real device or non-software-rendered browser, no new
+angle this run. Dialog-dismiss timing — already thoroughly investigated
+across multiple runs, not re-opened here.
+
+**No code changes this run.** The one new item (footer legal-entity name)
+is a content/business question outside this loop's authority to resolve
+unilaterally, not a bug to fix; the pricing-overlap trail traced
+conclusively to a scripted-exact-boundary artifact with no real-user path
+to it, documented above so it isn't re-chased. A clean no-op pass on the
+code side.
+
+**STATUS: NOT YET READY TO DEPLOY.** No console errors, no failed network
+requests, no overflow, no spec regressions, no fabricated content found in
+code changed by this loop, build/lint clean, full bilingual/responsive
+visual pass clean. Two items remain blocked on real-device/
+non-software-rendered-browser access: mobile-glow and dialog-dismiss
+timing (unchanged). Hero-delay remains blocked on Aymean's own
+creative-pacing decision. Portfolio/niche mismatch remains resolved.
+No-mobile-nav-drawer remains a considered, non-blocking choice. New this
+run: the footer's "ZYL Commerce LLC" directing-entity claim needs Aymean's
+explicit confirmation that it's real and correct before this counts as
+settled — everything else audited this pass held up against the brief and
+the reference docs with no new craft-bar shortfalls.
