@@ -3809,3 +3809,133 @@ above, not treated as blocking. As before: if Aymean is satisfied with the
 no-mobile-nav-drawer choice as known, low-impact gaps, there may not be much
 left to block a deploy decision on craft/QA grounds — that call remains
 his, not this loop's.
+
+## 2026-09-05 — forty-second run, resumed after an account-interruption gap; audit-only, one new test-methodology trap fully root-caused (confirmed harness-only, not a site bug)
+
+Resuming this loop after a gap (this account's routine was interrupted after
+the forty-first run on 2026-09-05 ~08:24 UTC; this run started ~10:15 UTC,
+~1h51m later, clear of the 45-minute collision window). Same mandate as
+every prior run, not a new project. `git pull origin master` — up to date
+at `54768ec` (forty-first run's own log entry), nothing else landed since.
+
+**Housekeeping note:** `REBUILD_BRIEF.md` lives at the repo root
+(`/REBUILD_BRIEF.md`), not under `docs/`. It is tracked and present — a
+`docs/REBUILD_BRIEF.md` path does not exist and never has (confirmed via
+`git log --all -- docs/REBUILD_BRIEF.md`, no history). Read it from the
+root path; the reference docs are correctly under `docs/reference/` as
+expected.
+
+**Method:** `npm install` (same incidental `package-lock.json` `libc`-field
+diff, reverted, not committed). `npm run build` clean — identical 484KB/
+1017KB main/hero-scene chunk split, same chunk-size advisory, no new
+warnings. `npm run lint` clean — same 6 pre-existing `only-export-components`
+warnings, no new ones. Real Playwright pass against a production `vite
+preview` build (global `playwright` via
+`require.resolve('playwright', {paths: ['/opt/node22/lib/node_modules']})`,
+`executablePath` pinned to `/opt/pw-browsers/chromium-1194/chrome-linux/chrome`),
+desktop 1440×900 and mobile (`devices['iPhone 13']`), both languages,
+scroll-through-before-capture methodology from the forty-first run applied
+throughout. Zero console errors and zero failed network requests across
+every capture, both languages, both viewports.
+
+**New test-methodology trap, fully root-caused this run (not a site bug —
+confirmed harness-only via five separate controlled experiments):**
+
+First-draft capture script toggled language *within the same browser
+context* after already taking a `page.screenshot({fullPage: true})` of the
+Arabic default state. The resulting English mobile capture showed all
+three portfolio cards stuck on their dark "static/glitch" overlay
+(`.card-static`, see `src/components/portfolio.tsx`'s `ScreenWipe`) instead
+of the real screenshots underneath — looked exactly like a broken
+touch-reveal regression.
+
+Investigated via direct `getComputedStyle(...).clipPath` inspection of the
+`.card-static` elements rather than trusting screenshots alone:
+
+1. Confirmed the reveal mechanism itself is correct and `key={dir}`-driven
+   remount on language toggle (documented in `src/components/reveal.tsx`'s
+   own comment, added specifically to fix an earlier real version of this
+   exact class of bug for `Reveal`/`RevealGroup`) works as designed —
+   `ScreenWipe`'s `.card-static` node fully remounts on `dir` change
+   (verified via a DOM-level marker attribute that reliably vanished across
+   toggle) and its fresh `whileInView` observer fires correctly on the next
+   scroll-into-view, in 8/8 clean trials with no screenshot taken in
+   between.
+2. Reproduced the stuck state deterministically — 6/6 trials — but *only*
+   when a `page.screenshot({ fullPage: true })` call sat between the first
+   scroll-through and the language-toggle click.
+3. Falsified every real-world-equivalent explanation before accepting it as
+   harness-only: manually resizing the viewport to the full page's
+   `scrollHeight` and back (mimicking what a `fullPage` capture does
+   internally) — 3/3 revealed fine. Manually resizing by a small amount and
+   back (mimicking a mobile browser's URL-bar show/hide) — 3/3 revealed
+   fine. A same-size, non-`fullPage` `page.screenshot()` in the identical
+   position in the sequence — 3/3 revealed fine. Only the actual
+   `fullPage: true` capture call reproduces it (3/3 in the head-to-head,
+   6/6 overall) — meaning this is specific to Playwright/Chromium's
+   `fullPage` screenshot internals (CDP's beyond-viewport capture path,
+   which does not fire an ordinary `resize` event), not anything a real
+   site visitor's browser does.
+
+**Conclusion: not a site defect.** No application code changed. Logging
+the full methodology here, alongside the two traps the forty-first run
+already documented, specifically so a future run's first-draft script
+doesn't waste a cycle chasing this same false alarm — the rule going
+forward: never take a `fullPage` screenshot of a language state and then
+toggle language in that same browser context before capturing the other
+language; use a fresh context per language (as this run's corrected script
+now does) instead.
+
+**Full visual pass, both languages, both viewports, with the corrected
+(fresh-context-per-language) script:** hero, process/"how it works",
+work/portfolio (3 anonymized cards, `greendent`/`bently`/`lavida` slugs
+re-confirmed via direct `portfolio-data.ts` read, no real client names,
+dental/dental/aesthetic mix unchanged), pricing ($3,000-$10,000 / 50% to
+start / 50% before delivery / <24h, correct both languages), contact
+(`contact@zaylogear.com`, WhatsApp `+966 57 351 3946`), footer — about still
+deliberately empty, correct. Portfolio images render correctly revealed on
+mobile in both languages once the trap above is avoided. Niche framing
+reconfirmed broad ("Clinics of every kind — Saudi Arabia" / متخصصون في مواقع
+العيادات بكل تخصصاتها), not narrowed.
+
+Overflow check via `document.documentElement.scrollWidth` vs.
+`clientWidth`: desktop 1440/1440 both languages (clean); mobile 398/390
+both languages — same already-documented transient residual on file since
+the thirty-third run, unchanged, not worsening.
+
+**Portfolio dialog spot-check:** opened via `[data-cursor="view"]` click,
+closed on a single Escape press within ~2.3s this run — consistent with
+the thirty-seventh/eighth runs' already-logged first-attempt-flakiness
+finding, not contradicting it. Single spot-check only, not a reason to
+re-open a full multi-trial batch.
+
+**Untouched, per standing rules:** `portfolio-data.ts` anonymization
+(confirmed by direct source read), pricing figures (confirmed both
+languages), About section (still deliberately empty, correct), contact
+email (confirmed correct, unchanged).
+
+**Not touched this run, deliberately:** hero-delay (resolved by Aymean
+directly, thirty-fourth run) — nothing further to check. Mobile
+emitter-glow/sparkle question — still blocked on a real device or
+non-software-rendered browser, no new angle this run. Dialog-dismiss
+timing — already thoroughly investigated, this run's single spot-check is
+consistent with the existing finding, not a reason to re-open a full
+investigation. No mobile nav drawer — logged as a considered-and-accepted
+state by the forty-first run, nothing new to add.
+
+**No code changes this run.** The one apparent anomaly traced conclusively
+to a test-harness-only interaction (documented in full above so a future
+run doesn't repeat the investigation), not a real site defect — a clean
+no-op pass on the code side.
+
+**STATUS: NOT YET READY TO DEPLOY.** No console errors, no failed network
+requests, no spec regressions, no fabricated content, build/lint clean, full
+bilingual/responsive visual pass clean once captured correctly. Two items
+remain blocked on real-device/non-software-rendered-browser access:
+mobile-glow and dialog-dismiss timing (unchanged). Both previously-resolved
+items (hero-delay, portfolio/niche mismatch) remain resolved. The
+no-mobile-nav-drawer observation remains a considered, non-blocking choice.
+As before: if Aymean is satisfied with the 3-card portfolio and accepts
+these real-device-only unknowns and the no-mobile-nav-drawer choice as
+known, low-impact gaps, there may not be much left to block a deploy
+decision on craft/QA grounds — that call remains his, not this loop's.
